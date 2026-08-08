@@ -1,22 +1,19 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
 }
 
 android {
-    namespace = "com.pjdev.pjdevmultiverseapp"
+    namespace = "com.pjdev.presentation"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.pjdev.pjdevmultiverseapp"
         minSdk = 26
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -32,20 +29,23 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    buildFeatures {
-        compose = true
-    }
 }
 
 dependencies {
 
     // Internal project modules.
-    implementation(project(":presentation"))
-    implementation(project(":data"))
+    implementation(project(":domain"))
 
-    // Android application entry point with Compose support.
-    implementation(libs.androidx.activity.compose)
+    // Compose.
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
 
     // Unit testing.
     testImplementation(libs.junit)
+
+    // Compose tooling available only in debug builds.
+    debugImplementation(libs.androidx.compose.ui.tooling)
 }

@@ -1,4 +1,4 @@
-package com.pjdev.pjdevmultiverseapp.ui.theme
+package com.pjdev.presentation.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

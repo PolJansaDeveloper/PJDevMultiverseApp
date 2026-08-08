@@ -1,4 +1,4 @@
-package com.pjdev.pjdevmultiverseapp.ui.theme
+package com.pjdev.presentation.theme
 
 import androidx.compose.ui.graphics.Color
 

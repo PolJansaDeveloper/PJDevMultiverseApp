@@ -1,22 +1,18 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.android.library)
 }
 
 android {
-    namespace = "com.pjdev.pjdevmultiverseapp"
+    namespace = "com.pjdev.data"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.pjdev.pjdevmultiverseapp"
         minSdk = 26
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -32,19 +28,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    buildFeatures {
-        compose = true
-    }
 }
 
 dependencies {
-
     // Internal project modules.
-    implementation(project(":presentation"))
-    implementation(project(":data"))
-
-    // Android application entry point with Compose support.
-    implementation(libs.androidx.activity.compose)
+    implementation(project(":domain"))
 
     // Unit testing.
     testImplementation(libs.junit)

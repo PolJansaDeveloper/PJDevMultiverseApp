@@ -1,4 +1,4 @@
-package com.pjdev.pjdevmultiverseapp.ui.theme
+package com.pjdev.presentation.theme
 
 import android.app.Activity
 import android.os.Build
