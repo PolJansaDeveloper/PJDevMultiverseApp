@@ -41,26 +41,30 @@ android {
 }
 
 dependencies {
-
-    // Internal project modules.
     implementation(project(":domain"))
 
     // Dependency injection.
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
-    // Unit testing.
-    testImplementation(libs.junit)
-
+    // Networking.
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.okhttp.core)
 
+    // Paging.
     implementation(libs.androidx.paging.common)
+
+    // Coroutines.
     implementation(libs.kotlinx.coroutines.core)
 
-    implementation(libs.okhttp.core)
+    // Testing.
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
+
+
 
 detekt {
     config.setFrom(rootProject.files("config/detekt/detekt.yml"))
