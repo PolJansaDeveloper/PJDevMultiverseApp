@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -26,8 +28,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
@@ -48,4 +50,8 @@ dependencies {
 
     // Compose tooling available only in debug builds.
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // Dependency injection.
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
 }
