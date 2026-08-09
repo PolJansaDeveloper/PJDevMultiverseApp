@@ -18,3 +18,9 @@ detekt {
     buildUponDefaultConfig = true
 }
 
+dependencies {
+
+    // Unit testing.
+    testImplementation(libs.junit)
+
+}

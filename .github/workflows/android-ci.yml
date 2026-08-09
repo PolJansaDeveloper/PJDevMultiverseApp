@@ -44,3 +44,6 @@ jobs:
 
       - name: Run Android Lint
         run: ./gradlew lint
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest :domain:test
