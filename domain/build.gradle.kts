@@ -20,7 +20,9 @@ detekt {
 
 dependencies {
 
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.androidx.paging.common)
+
     // Unit testing.
     testImplementation(libs.junit)
-
 }

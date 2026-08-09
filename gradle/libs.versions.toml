@@ -14,8 +14,12 @@ material = "1.13.0"
 hilt = "2.60.1"
 ksp = "2.3.10"
 detekt = "2.0.0-alpha.5"
+coroutines = "1.11.0"
+paging = "3.5.0"
 
 [libraries]
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+androidx-paging-common = { module = "androidx.paging:paging-common", version.ref = "paging" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
