@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -50,6 +51,15 @@ dependencies {
 
     // Unit testing.
     testImplementation(libs.junit)
+
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.kotlinx.serialization)
+    implementation(libs.kotlinx.serialization.json)
+
+    implementation(libs.androidx.paging.common)
+    implementation(libs.kotlinx.coroutines.core)
+
+    implementation(libs.okhttp.core)
 }
 
 detekt {
