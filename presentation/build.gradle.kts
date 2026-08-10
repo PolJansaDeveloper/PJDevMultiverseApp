@@ -69,6 +69,7 @@ dependencies {
 
     // Unit testing.
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 
     // Compose tooling available only in debug builds.
     debugImplementation(libs.androidx.compose.ui.tooling)
