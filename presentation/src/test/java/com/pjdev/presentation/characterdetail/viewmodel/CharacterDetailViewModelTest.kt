@@ -8,11 +8,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import com.pjdev.domain.error.DomainException
+import com.pjdev.presentation.common.error.UiError
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CharacterDetailViewModelTest {
@@ -61,8 +62,7 @@ class CharacterDetailViewModelTest {
     @Test
     fun loadCharacterUpdatesStateToError() =
         runTest(mainDispatcherRule.testDispatcher) {
-            val expectedException = IllegalStateException("Repository error")
-            repository.detailException = expectedException
+            repository.detailException = DomainException.Network()
 
             viewModel.loadCharacter(1)
             advanceUntilIdle()
@@ -70,9 +70,9 @@ class CharacterDetailViewModelTest {
             val state = viewModel.uiState.value
 
             assertTrue(state is CharacterDetailUiState.Error)
-            assertSame(
-                expectedException,
-                (state as CharacterDetailUiState.Error).throwable,
+            assertEquals(
+                UiError.Network,
+                (state as CharacterDetailUiState.Error).error,
             )
         }
 

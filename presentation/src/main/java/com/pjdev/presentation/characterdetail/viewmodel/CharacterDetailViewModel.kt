@@ -3,6 +3,7 @@ package com.pjdev.presentation.characterdetail.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pjdev.domain.usecase.GetCharacterDetailUseCase
+import com.pjdev.presentation.common.error.toUiError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,7 +40,7 @@ class CharacterDetailViewModel @Inject constructor(
                     },
                     onFailure = { throwable ->
                         _uiState.value = CharacterDetailUiState.Error(
-                            throwable = throwable,
+                            error = throwable.toUiError(),
                         )
                     },
                 )

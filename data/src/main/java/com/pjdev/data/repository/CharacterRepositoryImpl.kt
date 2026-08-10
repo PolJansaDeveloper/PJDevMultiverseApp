@@ -12,6 +12,7 @@ import com.pjdev.domain.model.CharacterDetail
 import com.pjdev.domain.repository.CharacterRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
+import com.pjdev.data.remote.error.toDomainFailure
 
 class CharacterRepositoryImpl @Inject constructor(
     private val api: RickAndMortyApi,
@@ -37,28 +38,31 @@ class CharacterRepositoryImpl @Inject constructor(
     override suspend fun getCharacterDetail(
         id: Int,
     ): CharacterDetail {
-        val characterDto = api.getCharacter(id)
+        return runCatching {
+            val character = api.getCharacter(id)
 
-        // Character responses contain episode URLs instead of episode objects.
-        // Extracting their IDs lets us request the episode details in bulk.
-        val episodeIds = characterDto.episode.mapNotNull { episodeUrl ->
-            episodeUrl.substringAfterLast('/').toIntOrNull()
+            val episodeIds = character.episode.mapNotNull { episodeUrl ->
+                episodeUrl.substringAfterLast('/').toIntOrNull()
+            }
+
+            val episodes = when (episodeIds.size) {
+                0 -> emptyList()
+
+                1 -> listOf(
+                    api.getEpisode(episodeIds.first()).toEpisode(),
+                )
+
+                else -> api.getEpisodes(
+                    episodeIds.joinToString(","),
+                ).map { episode ->
+                    episode.toEpisode()
+                }
+            }
+
+            character.toCharacterDetail(episodes)
+        }.getOrElse { throwable ->
+            throw throwable.toDomainFailure()
         }
-
-        val episodes = when (episodeIds.size) {
-            0 -> emptyList()
-
-            // The API returns a single object for one ID and a list for multiple IDs.
-            1 -> listOf(
-                api.getEpisode(episodeIds.first()).toEpisode(),
-            )
-
-            else -> api
-                .getEpisodes(episodeIds.joinToString(","))
-                .map { it.toEpisode() }
-        }
-
-        return characterDto.toCharacterDetail(episodes)
     }
 
     private companion object {

@@ -8,6 +8,7 @@ import com.pjdev.domain.model.Character
 import kotlinx.serialization.SerializationException
 import retrofit2.HttpException
 import java.io.IOException
+import com.pjdev.data.remote.error.toDomainFailure
 
 class CharacterPagingSource(
     private val api: RickAndMortyApi,
@@ -34,11 +35,11 @@ class CharacterPagingSource(
                 nextKey = if (response.info.next == null) null else page + 1,
             )
         } catch (exception: IOException) {
-            LoadResult.Error(exception)
+            LoadResult.Error(exception.toDomainFailure())
         } catch (exception: HttpException) {
-            LoadResult.Error(exception)
+            LoadResult.Error(exception.toDomainFailure())
         } catch (exception: SerializationException) {
-            LoadResult.Error(exception)
+            LoadResult.Error(exception.toDomainFailure())
         }
     }
 

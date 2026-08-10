@@ -3,7 +3,7 @@ package com.pjdev.pjdevmultiverseapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.pjdev.presentation.theme.PJDevMultiverseAppTheme
+import com.pjdev.presentation.theme.MultiverseTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 
@@ -16,7 +16,7 @@ class MainActivity : ComponentActivity() {
 
 
         setContent {
-            PJDevMultiverseAppTheme {
+            MultiverseTheme {
                 // Application content will be provided by the presentation layer.
             }
         }

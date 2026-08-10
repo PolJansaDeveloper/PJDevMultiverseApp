@@ -12,6 +12,9 @@ import org.junit.Test
 import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import com.pjdev.domain.error.DomainException
+import org.junit.Assert.assertSame
+
 
 class CharacterPagingSourceTest {
 
@@ -96,9 +99,10 @@ class CharacterPagingSourceTest {
 
         assertTrue(result is PagingSource.LoadResult.Error)
 
-        val error = result as PagingSource.LoadResult.Error
+        val error = (result as PagingSource.LoadResult.Error).throwable
 
-        assertEquals(expectedException, error.throwable)
+        assertTrue(error is DomainException.Network)
+        assertSame(expectedException, error.cause)
     }
 
     private fun createCharacterResponse(

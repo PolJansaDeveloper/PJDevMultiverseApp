@@ -1,6 +1,7 @@
 package com.pjdev.presentation.characterdetail.viewmodel
 
 import com.pjdev.domain.model.CharacterDetail
+import com.pjdev.presentation.common.error.UiError
 
 sealed interface CharacterDetailUiState {
 
@@ -11,6 +12,6 @@ sealed interface CharacterDetailUiState {
     ) : CharacterDetailUiState
 
     data class Error(
-        val throwable: Throwable,
+        val error: UiError,
     ) : CharacterDetailUiState
 }
