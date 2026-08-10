@@ -20,7 +20,14 @@ android {
         consumerProguardFiles("consumer-rules.pro")
     }
 
+
+
     buildTypes {
+
+        debug {
+            enableUnitTestCoverage = true
+        }
+
         release {
             isMinifyEnabled = false
             proguardFiles(

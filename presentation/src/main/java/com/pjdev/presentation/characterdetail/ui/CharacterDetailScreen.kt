@@ -40,6 +40,7 @@ import com.pjdev.presentation.characterdetail.viewmodel.CharacterDetailUiState
 import com.pjdev.presentation.characterdetail.viewmodel.CharacterDetailViewModel
 import com.pjdev.presentation.common.error.UiError
 import com.pjdev.presentation.theme.MultiverseSpacing
+import androidx.compose.foundation.layout.statusBarsPadding
 
 @Composable
 fun CharacterDetailRoute(
@@ -181,14 +182,15 @@ private fun CharacterDetailTopBar(
     onBackClick: () -> Unit,
 ) {
     Surface(
+        modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.background,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .statusBarsPadding()
                 .padding(
                     horizontal = MultiverseSpacing.screenHorizontal,
-                    vertical = MultiverseSpacing.small,
                 ),
             verticalAlignment = Alignment.CenterVertically,
         ) {

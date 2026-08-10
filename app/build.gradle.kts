@@ -64,6 +64,14 @@ dependencies {
     // Dependency injection.
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+
+    // Provides a consistent splash screen across supported Android versions.
+    implementation(libs.androidx.core.splashscreen)
+
 }
 
 detekt {

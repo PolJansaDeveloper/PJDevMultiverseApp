@@ -5,14 +5,14 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.pjdev.data.paging.CharacterPagingSource
 import com.pjdev.data.remote.api.RickAndMortyApi
+import com.pjdev.data.remote.error.toDomainFailure
 import com.pjdev.data.remote.mapper.toCharacterDetail
 import com.pjdev.data.remote.mapper.toEpisode
 import com.pjdev.domain.model.Character
 import com.pjdev.domain.model.CharacterDetail
 import com.pjdev.domain.repository.CharacterRepository
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
-import com.pjdev.data.remote.error.toDomainFailure
+import kotlinx.coroutines.flow.Flow
 
 class CharacterRepositoryImpl @Inject constructor(
     private val api: RickAndMortyApi,
@@ -24,6 +24,8 @@ class CharacterRepositoryImpl @Inject constructor(
         return Pager(
             config = PagingConfig(
                 pageSize = PAGE_SIZE,
+                initialLoadSize = PAGE_SIZE,
+                prefetchDistance = PREFETCH_DISTANCE,
                 enablePlaceholders = false,
             ),
             pagingSourceFactory = {
@@ -67,5 +69,6 @@ class CharacterRepositoryImpl @Inject constructor(
 
     private companion object {
         const val PAGE_SIZE = 20
+        const val PREFETCH_DISTANCE = 5
     }
 }
