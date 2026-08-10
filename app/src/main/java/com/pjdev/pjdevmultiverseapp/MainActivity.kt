@@ -3,7 +3,9 @@ package com.pjdev.pjdevmultiverseapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.pjdev.presentation.theme.PJDevMultiverseAppTheme
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.pjdev.pjdevmultiverseapp.navigation.MultiverseNavHost
+import com.pjdev.presentation.theme.MultiverseTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 
@@ -12,12 +14,13 @@ class MainActivity : ComponentActivity() {
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
 
         setContent {
-            PJDevMultiverseAppTheme {
-                // Application content will be provided by the presentation layer.
+            MultiverseTheme {
+                MultiverseNavHost()
             }
         }
     }

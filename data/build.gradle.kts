@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -19,6 +20,11 @@ android {
     }
 
     buildTypes {
+
+        debug {
+            enableUnitTestCoverage = true
+        }
+
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -40,17 +46,30 @@ android {
 }
 
 dependencies {
-
-    // Internal project modules.
     implementation(project(":domain"))
 
     // Dependency injection.
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
-    // Unit testing.
+    // Networking.
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.kotlinx.serialization)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.okhttp.core)
+
+    // Paging.
+    implementation(libs.androidx.paging.common)
+
+    // Coroutines.
+    implementation(libs.kotlinx.coroutines.core)
+
+    // Testing.
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
+
+
 
 detekt {
     config.setFrom(rootProject.files("config/detekt/detekt.yml"))

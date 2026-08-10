@@ -8,6 +8,7 @@ plugins {
 
 android {
     namespace = "com.pjdev.presentation"
+
     compileSdk {
         version = release(37)
     }
@@ -19,15 +20,23 @@ android {
         consumerProguardFiles("consumer-rules.pro")
     }
 
+
+
     buildTypes {
+
+        debug {
+            enableUnitTestCoverage = true
+        }
+
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -37,11 +46,9 @@ android {
         abortOnError = true
         warningsAsErrors = false
     }
-
 }
 
 dependencies {
-
     // Internal project modules.
     implementation(project(":domain"))
 
@@ -52,15 +59,31 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
-    // Unit testing.
-    testImplementation(libs.junit)
+    // Lifecycle and ViewModel.
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
-    // Compose tooling available only in debug builds.
-    debugImplementation(libs.androidx.compose.ui.tooling)
+    // Coroutines.
+    implementation(libs.kotlinx.coroutines.core)
+
+    // Paging.
+    implementation(libs.androidx.paging.common)
+    implementation(libs.androidx.paging.compose)
 
     // Dependency injection.
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+
+    // Unit testing.
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+
+    // Compose tooling available only in debug builds.
+    debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // Image loading.
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 }
 
 detekt {
