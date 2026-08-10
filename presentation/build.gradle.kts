@@ -73,6 +73,10 @@ dependencies {
 
     // Compose tooling available only in debug builds.
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // Image loading.
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 }
 
 detekt {

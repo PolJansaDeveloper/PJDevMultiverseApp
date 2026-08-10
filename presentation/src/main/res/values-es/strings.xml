@@ -10,6 +10,8 @@
     <string name="character_search_hint">Buscar personajes</string>
     <string name="character_episodes_count">%1$d episodios</string>
     <string name="character_view_details">Ver personaje</string>
+    <string name="scroll_to_top">Volver arriba</string>
+    <string name="load_more_error">No se han podido cargar más personajes.</string>
 
     <!-- Character detail -->
     <string name="character_detail_status">Estado</string>

@@ -10,6 +10,8 @@
     <string name="character_search_hint">Search characters</string>
     <string name="character_episodes_count">%1$d episodes</string>
     <string name="character_view_details">View character</string>
+    <string name="scroll_to_top">Back to top</string>
+    <string name="load_more_error">Couldn\'t load more characters.</string>
 
     <!-- Character detail -->
     <string name="character_detail_status">Status</string>
