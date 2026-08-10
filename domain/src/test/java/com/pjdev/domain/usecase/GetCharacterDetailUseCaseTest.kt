@@ -5,15 +5,16 @@ import com.pjdev.domain.model.Character
 import com.pjdev.domain.model.CharacterDetail
 import com.pjdev.domain.repository.CharacterRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GetCharacterDetailUseCaseTest {
 
     @Test
-    fun getCharacterDetailReturnsRepositoryResult() = runTest {
+    fun getCharacterDetailReturnsSuccessWhenRepositorySucceeds() = runTest {
         val expectedCharacter = CharacterDetail(
             id = 1,
             name = "Rick Sanchez",
@@ -21,24 +22,57 @@ class GetCharacterDetailUseCaseTest {
             status = "Alive",
             species = "Human",
             origin = "Earth",
-            location = "Earth",
+            location = "Citadel of Ricks",
             episodes = emptyList(),
         )
 
         val repository = object : CharacterRepository {
+
             override fun getCharacters(
                 name: String?,
-            ): Flow<PagingData<Character>> = emptyFlow()
+            ): Flow<PagingData<Character>> {
+                error("Not required for this test")
+            }
 
             override suspend fun getCharacterDetail(
                 id: Int,
-            ): CharacterDetail = expectedCharacter
+            ): CharacterDetail {
+                return expectedCharacter
+            }
         }
 
         val useCase = GetCharacterDetailUseCase(repository)
 
-        val result = useCase(id = 1)
+        val result = useCase(1)
 
-        assertEquals(expectedCharacter, result)
+        assertTrue(result.isSuccess)
+        assertEquals(expectedCharacter, result.getOrNull())
+    }
+
+    @Test
+    fun getCharacterDetailReturnsFailureWhenRepositoryThrows() = runTest {
+        val expectedException = IllegalStateException("Repository error")
+
+        val repository = object : CharacterRepository {
+
+            override fun getCharacters(
+                name: String?,
+            ): Flow<PagingData<Character>> {
+                error("Not required for this test")
+            }
+
+            override suspend fun getCharacterDetail(
+                id: Int,
+            ): CharacterDetail {
+                throw expectedException
+            }
+        }
+
+        val useCase = GetCharacterDetailUseCase(repository)
+
+        val result = useCase(1)
+
+        assertTrue(result.isFailure)
+        assertSame(expectedException, result.exceptionOrNull())
     }
 }
