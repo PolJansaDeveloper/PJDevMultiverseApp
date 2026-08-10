@@ -20,6 +20,8 @@
     <string name="character_detail_location">Ubicación</string>
     <string name="character_detail_episodes">Episodios</string>
     <string name="character_detail_back">Volver</string>
+    <string name="episode_air_date">Emitido el %1$s</string>
+    <string name="accessibility_episode_item">%1$s, %2$s, emitido el %3$s</string>
 
     <!-- States -->
     <string name="loading">Cargando…</string>
