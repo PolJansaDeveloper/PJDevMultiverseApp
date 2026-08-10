@@ -53,6 +53,7 @@ dependencies {
     // Internal project modules.
     implementation(project(":presentation"))
     implementation(project(":data"))
+    implementation(project(":domain"))
 
     // Android application entry point with Compose support.
     implementation(libs.androidx.activity.compose)
