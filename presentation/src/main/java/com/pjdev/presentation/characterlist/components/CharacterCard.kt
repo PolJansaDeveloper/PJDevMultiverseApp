@@ -21,19 +21,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.pjdev.domain.model.Character
 import com.pjdev.presentation.R
 import com.pjdev.presentation.theme.MultiverseSpacing
 import com.pjdev.presentation.theme.MultiverseTheme
+import com.pjdev.presentation.common.components.CharacterPortrait
 
 @Composable
 fun CharacterCard(
@@ -80,8 +78,10 @@ private fun CharacterCardContent(
             .padding(MultiverseSpacing.medium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CharacterImage(
-            character = character,
+        CharacterPortrait(
+            name = character.name,
+            imageUrl = character.imageUrl,
+            size = CHARACTER_IMAGE_SIZE,
         )
 
         Spacer(
@@ -155,25 +155,6 @@ private fun CharacterDetailsHint() {
             color = MaterialTheme.colorScheme.primary,
         )
     }
-}
-
-@Composable
-private fun CharacterImage(
-    character: Character,
-    modifier: Modifier = Modifier,
-) {
-    val isPreview = LocalInspectionMode.current
-
-    // The image is decorative for accessibility because the parent card
-    // already exposes the character information through merged semantics.
-    AsyncImage(
-        model = if (isPreview) null else character.imageUrl,
-        contentDescription = null,
-        modifier = modifier
-            .size(CHARACTER_IMAGE_SIZE)
-            .clip(MaterialTheme.shapes.medium),
-        contentScale = ContentScale.Crop,
-    )
 }
 
 @Preview(
