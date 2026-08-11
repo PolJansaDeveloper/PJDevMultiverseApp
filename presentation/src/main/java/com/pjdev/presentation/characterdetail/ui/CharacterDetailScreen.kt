@@ -41,6 +41,7 @@ import com.pjdev.presentation.characterdetail.viewmodel.CharacterDetailViewModel
 import com.pjdev.presentation.common.error.UiError
 import com.pjdev.presentation.theme.MultiverseSpacing
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.semantics.clearAndSetSemantics
 
 @Composable
 fun CharacterDetailRoute(
@@ -202,6 +203,16 @@ private fun CharacterDetailTopBar(
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
+            Spacer(
+                modifier = Modifier.weight(1f),
+            )
+
+            Text(
+                text = stringResource(R.string.app_signature),
+                modifier = Modifier.clearAndSetSemantics {},
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

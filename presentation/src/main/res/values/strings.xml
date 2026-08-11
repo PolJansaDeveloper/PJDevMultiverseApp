@@ -3,6 +3,7 @@
 
     <!-- App -->
     <string name="app_name">Multiverse</string>
+    <string name="app_signature" translatable="false">PJDev</string>
 
     <!-- Character list -->
     <string name="character_list_title">Multiverse</string>
@@ -43,10 +44,7 @@
     <string name="retry">Retry</string>
 
     <!-- Accessibility -->
-    <string name="accessibility_character_image">Image of %1$s</string>
     <string name="accessibility_character_card">Open details for %1$s</string>
     <string name="accessibility_search_clear">Clear search</string>
-    <string name="accessibility_scroll_to_top">Scroll to top</string>
-    <string name="accessibility_back">Navigate back</string>
 
 </resources>

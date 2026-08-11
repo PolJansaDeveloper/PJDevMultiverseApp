@@ -3,12 +3,14 @@ package com.pjdev.data.paging
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.pjdev.data.remote.api.RickAndMortyApi
+import com.pjdev.data.remote.error.toDomainFailure
 import com.pjdev.data.remote.mapper.toCharacter
 import com.pjdev.domain.model.Character
+import java.io.IOException
+import kotlinx.coroutines.delay
 import kotlinx.serialization.SerializationException
 import retrofit2.HttpException
-import java.io.IOException
-import com.pjdev.data.remote.error.toDomainFailure
+import kotlin.time.Duration.Companion.milliseconds
 
 class CharacterPagingSource(
     private val api: RickAndMortyApi,
@@ -21,9 +23,8 @@ class CharacterPagingSource(
         return try {
             val page = params.key ?: INITIAL_PAGE
 
-            val response = api.getCharacters(
+            val response = loadPageWithRateLimitRetry(
                 page = page,
-                name = name,
             )
 
             LoadResult.Page(
@@ -43,6 +44,50 @@ class CharacterPagingSource(
         }
     }
 
+    private suspend fun loadPageWithRateLimitRetry(
+        page: Int,
+    ) = try {
+        api.getCharacters(
+            page = page,
+            name = name,
+        )
+    } catch (exception: HttpException) {
+        if (exception.code() != HTTP_TOO_MANY_REQUESTS) {
+            throw exception
+        }
+
+        // A short bounded backoff absorbs temporary API throttling without
+        // hiding persistent failures from the user.
+        delay(
+            rateLimitRetryDelay(
+                exception = exception,
+            ).milliseconds,
+        )
+
+        api.getCharacters(
+            page = page,
+            name = name,
+        )
+    }
+
+    private fun rateLimitRetryDelay(
+        exception: HttpException,
+    ): Long {
+        val retryAfterSeconds = exception
+            .response()
+            ?.headers()
+            ?.get(RETRY_AFTER_HEADER)
+            ?.toLongOrNull()
+
+        return retryAfterSeconds
+            ?.times(MILLIS_PER_SECOND)
+            ?.coerceIn(
+                minimumValue = MIN_RETRY_DELAY_MILLIS,
+                maximumValue = MAX_RETRY_DELAY_MILLIS,
+            )
+            ?: DEFAULT_RETRY_DELAY_MILLIS
+    }
+
     override fun getRefreshKey(
         state: PagingState<Int, Character>,
     ): Int? {
@@ -56,5 +101,13 @@ class CharacterPagingSource(
 
     private companion object {
         const val INITIAL_PAGE = 1
+
+        const val HTTP_TOO_MANY_REQUESTS = 429
+        const val RETRY_AFTER_HEADER = "Retry-After"
+
+        const val MILLIS_PER_SECOND = 1_000L
+        const val DEFAULT_RETRY_DELAY_MILLIS = 1_000L
+        const val MIN_RETRY_DELAY_MILLIS = 750L
+        const val MAX_RETRY_DELAY_MILLIS = 3_000L
     }
 }

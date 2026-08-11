@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -15,21 +14,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.pjdev.domain.model.CharacterDetail
 import com.pjdev.presentation.R
 import com.pjdev.presentation.theme.MultiverseSpacing
 import com.pjdev.presentation.theme.MultiverseTheme
 import androidx.compose.ui.text.style.TextAlign
+import com.pjdev.presentation.common.components.CharacterPortrait
 
 @Composable
 fun CharacterDetailHeader(
@@ -47,8 +43,10 @@ fun CharacterDetailHeader(
                 .padding(MultiverseSpacing.medium),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CharacterDetailImage(
-                character = character,
+            CharacterPortrait(
+                name = character.name,
+                imageUrl = character.imageUrl,
+                size = DETAIL_IMAGE_SIZE,
             )
 
             Spacer(
@@ -61,25 +59,6 @@ fun CharacterDetailHeader(
             )
         }
     }
-}
-
-@Composable
-private fun CharacterDetailImage(
-    character: CharacterDetail,
-    modifier: Modifier = Modifier,
-) {
-    val isPreview = LocalInspectionMode.current
-
-    // The textual content next to the image already identifies the character,
-    // so the image does not need a duplicated accessibility announcement.
-    AsyncImage(
-        model = if (isPreview) null else character.imageUrl,
-        contentDescription = null,
-        modifier = modifier
-            .size(DETAIL_IMAGE_SIZE)
-            .clip(MaterialTheme.shapes.medium),
-        contentScale = ContentScale.Crop,
-    )
 }
 
 @Composable

@@ -31,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -45,12 +46,12 @@ import com.pjdev.domain.model.Character
 import com.pjdev.presentation.R
 import com.pjdev.presentation.characterlist.components.CharacterCard
 import com.pjdev.presentation.characterlist.components.CharacterSearchBar
-import com.pjdev.presentation.characterlist.viewmodel.CharacterListViewModel
-import com.pjdev.presentation.common.error.UiError
-import com.pjdev.presentation.common.error.toUiError
 import com.pjdev.presentation.characterlist.components.EmptyState
 import com.pjdev.presentation.characterlist.components.ErrorState
 import com.pjdev.presentation.characterlist.components.LoadingState
+import com.pjdev.presentation.characterlist.viewmodel.CharacterListViewModel
+import com.pjdev.presentation.common.error.UiError
+import com.pjdev.presentation.common.error.toUiError
 import com.pjdev.presentation.theme.MultiverseSpacing
 import kotlinx.coroutines.launch
 
@@ -82,12 +83,17 @@ fun CharacterListScreen(
 ) {
     val listState = rememberLazyListState()
 
+    val isListVisible =
+        characters.loadState.refresh is LoadState.NotLoading &&
+                characters.itemCount > 0
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
             ScrollToTopButton(
                 listState = listState,
+                isListVisible = isListVisible,
             )
         },
     ) { innerPadding ->
@@ -155,14 +161,28 @@ private fun CharacterListHeader() {
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(
-            text = stringResource(R.string.character_list_title),
-            modifier = Modifier.semantics {
-                heading()
-            },
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onBackground,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
         )
+        {
+            Text(
+                text = stringResource(R.string.character_list_title),
+                modifier = Modifier.semantics {
+                    heading()
+                },
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+
+            Text(
+                text = stringResource(R.string.app_signature),
+                modifier = Modifier.clearAndSetSemantics {},
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
 
         Spacer(
             modifier = Modifier.height(MultiverseSpacing.small),
@@ -186,16 +206,16 @@ private fun CharacterListContent(
 ) {
     val refreshState = characters.loadState.refresh
 
-    // Rendering depends on both the Paging refresh state and whether
-    // previously loaded items are still available on screen.
+    // Refresh belongs to the current Paging generation. Previous items must
+    // not hide loading or error states from a new search.
     when {
-        refreshState is LoadState.Loading && characters.itemCount == 0 -> {
+        refreshState is LoadState.Loading -> {
             LoadingState(
                 modifier = modifier,
             )
         }
 
-        refreshState is LoadState.Error && characters.itemCount == 0 -> {
+        refreshState is LoadState.Error -> {
             CharacterListRefreshError(
                 query = query,
                 error = refreshState.error.toUiError(),
@@ -204,7 +224,7 @@ private fun CharacterListContent(
             )
         }
 
-        refreshState is LoadState.NotLoading && characters.itemCount == 0 -> {
+        characters.itemCount == 0 -> {
             EmptyState(
                 modifier = modifier,
             )
@@ -303,6 +323,7 @@ private fun CharacterLazyList(
 @Composable
 private fun ScrollToTopButton(
     listState: LazyListState,
+    isListVisible: Boolean,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -315,7 +336,7 @@ private fun ScrollToTopButton(
     }
 
     AnimatedVisibility(
-        visible = showScrollToTop,
+        visible = isListVisible && showScrollToTop,
     ) {
         Button(
             onClick = {
