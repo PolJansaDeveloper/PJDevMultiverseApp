@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- App -->
+    <string name="app_name">Multiverse</string>
+
+    <!-- Character list -->
+    <string name="character_list_title">Multiverse</string>
+    <string name="character_list_subtitle">Explora personajes entre dimensiones</string>
+    <string name="character_search_hint">Buscar personajes</string>
+    <string name="character_episodes_count">%1$d episodios</string>
+    <string name="character_view_details">Ver personaje</string>
+    <string name="scroll_to_top">Volver arriba</string>
+    <string name="load_more_error">No se han podido cargar más personajes.</string>
+
+    <!-- Character detail -->
+    <string name="character_detail_status">Estado</string>
+    <string name="character_detail_species">Especie</string>
+    <string name="character_detail_origin">Origen</string>
+    <string name="character_detail_location">Ubicación</string>
+    <string name="character_detail_episodes">Episodios</string>
+    <string name="character_detail_back">Volver</string>
+    <string name="episode_air_date">Emitido el %1$s</string>
+    <string name="accessibility_episode_item">%1$s, %2$s, emitido el %3$s</string>
+
+    <!-- States -->
+    <string name="loading">Cargando…</string>
+    <string name="loading_characters">Explorando dimensiones…</string>
+    <string name="empty_characters_title">No se han encontrado personajes</string>
+    <string name="empty_characters_message">Prueba con otro nombre.</string>
+
+    <!-- Errors -->
+    <string name="error_network_title">Sin conexión</string>
+    <string name="error_network_message">Comprueba tu conexión a internet e inténtalo de nuevo.</string>
+    <string name="error_not_found_title">No encontrado</string>
+    <string name="error_not_found_message">No hemos podido encontrar lo que buscabas.</string>
+    <string name="error_rate_limited_title">Demasiadas solicitudes</string>
+    <string name="error_rate_limited_message">Espera un momento antes de volver a intentarlo.</string>
+    <string name="error_server_title">Dimensión no disponible</string>
+    <string name="error_server_message">El servidor no está disponible temporalmente.</string>
+    <string name="error_unknown_title">Algo ha ido mal</string>
+    <string name="error_unknown_message">Se ha producido un error inesperado.</string>
+    <string name="retry">Reintentar</string>
+
+    <!-- Accessibility -->
+    <string name="accessibility_character_card">Abrir detalles de %1$s</string>
+    <string name="accessibility_search_clear">Borrar búsqueda</string>
+
+</resources>
