@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -71,6 +72,8 @@ dependencies {
 
     // Provides a consistent splash screen across supported Android versions.
     implementation(libs.androidx.core.splashscreen)
+
+    implementation(libs.kotlinx.serialization.json)
 
 }
 
