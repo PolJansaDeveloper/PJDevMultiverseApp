@@ -5,6 +5,8 @@ import androidx.room.Room
 import com.pjdev.data.source.local.dao.CharacterDao
 import com.pjdev.data.source.local.dao.EpisodeDao
 import com.pjdev.data.source.local.dao.RemoteKeyDao
+import com.pjdev.data.source.local.database.MIGRATION_1_2
+import com.pjdev.data.source.local.database.MIGRATION_2_3
 import com.pjdev.data.source.local.database.MultiverseDatabase
 import dagger.Module
 import dagger.Provides
@@ -26,7 +28,12 @@ object DatabaseModule {
             context,
             MultiverseDatabase::class.java,
             DATABASE_NAME,
-        ).build()
+        )
+            .addMigrations(
+                MIGRATION_1_2,
+                MIGRATION_2_3,
+            )
+            .build()
     }
 
     @Provides

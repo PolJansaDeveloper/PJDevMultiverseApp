@@ -19,7 +19,7 @@ import com.pjdev.data.source.local.entity.RemoteKeyEntity
         EpisodeEntity::class,
         CharacterEpisodeCrossRef::class,
     ],
-    version = 1,
+    version = 3,
     exportSchema = true,
 )
 abstract class MultiverseDatabase : RoomDatabase() {

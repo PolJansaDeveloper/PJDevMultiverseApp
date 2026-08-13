@@ -1,4 +1,4 @@
-package com.pjdev.data.paging
+package com.pjdev.data.source.remote.paging
 
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.LoadType
@@ -16,6 +16,7 @@ import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import retrofit2.HttpException
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalPagingApi::class)
@@ -23,6 +24,7 @@ class CharacterRemoteMediator(
     private val api: RickAndMortyApi,
     private val database: MultiverseDatabase,
     name: String?,
+    private val currentTimeMillis: () -> Long = System::currentTimeMillis,
 ) : RemoteMediator<Int, CharacterEntity>() {
 
     private val remoteName = name
@@ -46,17 +48,25 @@ class CharacterRemoteMediator(
                 searchQuery = searchQuery,
             )
 
-        /*
-         * Existing cached data can be displayed immediately without forcing
-         * an initial network refresh.
-         *
-         * Skipping that refresh also prevents an offline startup failure from
-         * blocking future APPEND requests when connectivity becomes available.
-         */
-        return if (
-            cachedCharacterCount > 0 &&
-            remoteKey != null
+        if (
+            cachedCharacterCount == 0 ||
+            remoteKey == null
         ) {
+            return InitializeAction.LAUNCH_INITIAL_REFRESH
+        }
+
+        val cacheAgeMillis =
+            currentTimeMillis() - remoteKey.lastUpdatedAtMillis
+
+        val isCacheFresh =
+            cacheAgeMillis <= CACHE_TIMEOUT.inWholeMilliseconds
+
+        /*
+         * Fresh cached data is displayed immediately without an unnecessary
+         * remote refresh. Stale data remains available through Room while
+         * Paging attempts to refresh it from the API.
+         */
+        return if (isCacheFresh) {
             InitializeAction.SKIP_INITIAL_REFRESH
         } else {
             InitializeAction.LAUNCH_INITIAL_REFRESH
@@ -100,9 +110,17 @@ class CharacterRemoteMediator(
             val endOfPaginationReached =
                 response.info.next == null
 
+            val requestCompletedAtMillis =
+                currentTimeMillis()
+
             database.withTransaction {
                 val characterDao = database.characterDao()
                 val remoteKeyDao = database.remoteKeyDao()
+
+                val previousRemoteKey = remoteKeyDao
+                    .getRemoteKey(
+                        searchQuery = searchQuery,
+                    )
 
                 if (loadType == LoadType.REFRESH) {
                     characterDao.clearCharacterQuery(
@@ -133,6 +151,15 @@ class CharacterRemoteMediator(
                         ),
                 )
 
+                val lastUpdatedAtMillis =
+                    if (loadType == LoadType.REFRESH) {
+                        requestCompletedAtMillis
+                    } else {
+                        previousRemoteKey
+                            ?.lastUpdatedAtMillis
+                            ?: requestCompletedAtMillis
+                    }
+
                 remoteKeyDao.upsertRemoteKey(
                     remoteKey = RemoteKeyEntity(
                         searchQuery = searchQuery,
@@ -141,6 +168,7 @@ class CharacterRemoteMediator(
                         } else {
                             page + 1
                         },
+                        lastUpdatedAtMillis = lastUpdatedAtMillis,
                     ),
                 )
             }
@@ -150,11 +178,76 @@ class CharacterRemoteMediator(
             )
         } catch (exception: CancellationException) {
             throw exception
+        } catch (exception: HttpException) {
+            if (
+                exception.code() == HTTP_NOT_FOUND &&
+                remoteName != null
+            ) {
+                handleSearchNotFound(
+                    loadType = loadType,
+                )
+            } else {
+                MediatorResult.Error(
+                    exception.toDomainFailure(),
+                )
+            }
         } catch (exception: Throwable) {
             MediatorResult.Error(
                 exception.toDomainFailure(),
             )
         }
+    }
+
+    private suspend fun handleSearchNotFound(
+        loadType: LoadType,
+    ): MediatorResult {
+        database.withTransaction {
+            val characterDao = database.characterDao()
+            val remoteKeyDao = database.remoteKeyDao()
+
+            when (loadType) {
+                LoadType.REFRESH -> {
+                    /*
+                     * A filtered 404 represents a successful search with no
+                     * results, so stale memberships must be removed.
+                     */
+                    characterDao.clearCharacterQuery(
+                        searchQuery = searchQuery,
+                    )
+
+                    remoteKeyDao.clearRemoteKey(
+                        searchQuery = searchQuery,
+                    )
+                }
+
+                LoadType.APPEND -> {
+                    /*
+                     * Preserve already cached search results while marking the
+                     * remote pagination as complete.
+                     */
+                    val currentRemoteKey = remoteKeyDao
+                        .getRemoteKey(
+                            searchQuery = searchQuery,
+                        )
+
+                    remoteKeyDao.upsertRemoteKey(
+                        remoteKey = RemoteKeyEntity(
+                            searchQuery = searchQuery,
+                            nextPage = null,
+                            lastUpdatedAtMillis = currentRemoteKey
+                                ?.lastUpdatedAtMillis
+                                ?: currentTimeMillis(),
+                        ),
+                    )
+                }
+
+                LoadType.PREPEND -> Unit
+            }
+        }
+
+        return MediatorResult.Success(
+            endOfPaginationReached = true,
+        )
     }
 
     private suspend fun loadPageWithRateLimitRetry(
@@ -202,12 +295,16 @@ class CharacterRemoteMediator(
     private companion object {
         const val INITIAL_PAGE = 1
 
+        const val HTTP_NOT_FOUND = 404
         const val HTTP_TOO_MANY_REQUESTS = 429
+
         const val RETRY_AFTER_HEADER = "Retry-After"
 
         const val MILLIS_PER_SECOND = 1_000L
         const val DEFAULT_RETRY_DELAY_MILLIS = 1_000L
         const val MIN_RETRY_DELAY_MILLIS = 750L
         const val MAX_RETRY_DELAY_MILLIS = 3_000L
+
+        val CACHE_TIMEOUT = 24.hours
     }
 }

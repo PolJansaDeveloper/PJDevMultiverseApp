@@ -6,7 +6,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
 import androidx.room.withTransaction
-import com.pjdev.data.paging.CharacterRemoteMediator
+import com.pjdev.data.source.remote.paging.CharacterRemoteMediator
 import com.pjdev.data.source.local.database.MultiverseDatabase
 import com.pjdev.data.source.local.mapper.toCharacter
 import com.pjdev.data.source.local.mapper.toCharacterDetail

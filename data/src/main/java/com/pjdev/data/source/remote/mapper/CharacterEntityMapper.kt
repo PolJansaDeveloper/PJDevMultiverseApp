@@ -32,7 +32,7 @@ fun List<CharacterDto>.toQueryEntities(
 }
 
 fun CharacterDto.toEpisodeCrossRefs(): List<CharacterEpisodeCrossRef> {
-    return episode.mapNotNull { episodeUrl ->
+    return episode.mapIndexedNotNull { index, episodeUrl ->
         val episodeId = episodeUrl
             .substringAfterLast('/')
             .toIntOrNull()
@@ -41,6 +41,7 @@ fun CharacterDto.toEpisodeCrossRefs(): List<CharacterEpisodeCrossRef> {
             CharacterEpisodeCrossRef(
                 characterId = id,
                 episodeId = it,
+                position = index,
             )
         }
     }

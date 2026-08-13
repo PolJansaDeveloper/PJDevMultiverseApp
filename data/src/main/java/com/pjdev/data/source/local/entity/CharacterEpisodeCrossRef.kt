@@ -1,5 +1,6 @@
 package com.pjdev.data.source.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -22,11 +23,17 @@ import androidx.room.Index
         ),
     ],
     indices = [
-        Index(value = ["characterId"]),
-        Index(value = ["episodeId"]),
+        Index(
+            value = ["characterId", "position"],
+        ),
+        Index(
+            value = ["episodeId"],
+        ),
     ],
 )
 data class CharacterEpisodeCrossRef(
     val characterId: Int,
     val episodeId: Int,
+    @ColumnInfo(defaultValue = "0")
+    val position: Int,
 )

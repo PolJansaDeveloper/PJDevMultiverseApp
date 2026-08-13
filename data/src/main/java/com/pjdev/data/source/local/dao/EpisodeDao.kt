@@ -23,10 +23,10 @@ interface EpisodeDao {
         """
         SELECT episodes.*
         FROM episodes
-        INNER JOIN character_episode_cross_ref
-            ON episodes.id = character_episode_cross_ref.episodeId
-        WHERE character_episode_cross_ref.characterId = :characterId
-        ORDER BY episodes.id ASC
+        INNER JOIN character_episode_cross_ref AS cross_ref
+            ON episodes.id = cross_ref.episodeId
+        WHERE cross_ref.characterId = :characterId
+        ORDER BY cross_ref.position ASC
         """
     )
     suspend fun getEpisodesForCharacter(
