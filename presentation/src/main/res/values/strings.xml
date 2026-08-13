@@ -2,7 +2,6 @@
 <resources>
 
     <!-- App -->
-    <string name="app_name">Multiverse</string>
     <string name="app_signature" translatable="false">PJDev</string>
 
     <!-- Character list -->

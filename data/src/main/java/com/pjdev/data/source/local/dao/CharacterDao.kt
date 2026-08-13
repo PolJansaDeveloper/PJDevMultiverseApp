@@ -67,3 +67,4 @@ interface CharacterDao {
         searchQuery: String,
     )
 }
+

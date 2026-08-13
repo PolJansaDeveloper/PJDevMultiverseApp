@@ -9,6 +9,7 @@ import com.pjdev.data.source.local.database.MultiverseDatabase
 import com.pjdev.data.source.local.entity.CharacterEntity
 import com.pjdev.data.source.local.entity.RemoteKeyEntity
 import com.pjdev.data.source.remote.api.RickAndMortyApi
+import com.pjdev.data.source.remote.dto.CharacterResponseDto
 import com.pjdev.data.source.remote.error.toDomainFailure
 import com.pjdev.data.source.remote.mapper.toEntity
 import com.pjdev.data.source.remote.mapper.toQueryEntities
@@ -63,8 +64,7 @@ class CharacterRemoteMediator(
 
         /*
          * Fresh cached data is displayed immediately without an unnecessary
-         * remote refresh. Stale data remains available through Room while
-         * Paging attempts to refresh it from the API.
+         * remote refresh. Stale data remains available while Paging refreshes.
          */
         return if (isCacheFresh) {
             InitializeAction.SKIP_INITIAL_REFRESH
@@ -77,124 +77,170 @@ class CharacterRemoteMediator(
         loadType: LoadType,
         state: PagingState<Int, CharacterEntity>,
     ): MediatorResult {
-        val page = when (loadType) {
-            LoadType.REFRESH -> INITIAL_PAGE
+        val page = resolvePage(
+            loadType = loadType,
+        ) ?: return MediatorResult.Success(
+            endOfPaginationReached = true,
+        )
 
-            LoadType.PREPEND -> {
-                return MediatorResult.Success(
-                    endOfPaginationReached = true,
-                )
-            }
-
-            LoadType.APPEND -> {
-                val remoteKey = database
-                    .remoteKeyDao()
-                    .getRemoteKey(
-                        searchQuery = searchQuery,
-                    )
-
-                val nextPage = remoteKey?.nextPage
-                    ?: return MediatorResult.Success(
-                        endOfPaginationReached = true,
-                    )
-
-                nextPage
-            }
-        }
-
-        return try {
-            val response = loadPageWithRateLimitRetry(
+        val loadResult = runCatching {
+            loadAndPersistPage(
+                loadType = loadType,
                 page = page,
             )
+        }
 
-            val endOfPaginationReached =
-                response.info.next == null
+        val failure = loadResult.exceptionOrNull()
 
-            val requestCompletedAtMillis =
-                currentTimeMillis()
+        return if (failure == null) {
+            loadResult.getOrThrow()
+        } else {
+            handleLoadFailure(
+                loadType = loadType,
+                throwable = failure,
+            )
+        }
+    }
 
-            database.withTransaction {
-                val characterDao = database.characterDao()
-                val remoteKeyDao = database.remoteKeyDao()
+    private suspend fun resolvePage(
+        loadType: LoadType,
+    ): Int? {
+        return when (loadType) {
+            LoadType.REFRESH -> INITIAL_PAGE
 
-                val previousRemoteKey = remoteKeyDao
-                    .getRemoteKey(
-                        searchQuery = searchQuery,
-                    )
+            LoadType.PREPEND -> null
 
-                if (loadType == LoadType.REFRESH) {
-                    characterDao.clearCharacterQuery(
-                        searchQuery = searchQuery,
-                    )
+            LoadType.APPEND -> database
+                .remoteKeyDao()
+                .getRemoteKey(
+                    searchQuery = searchQuery,
+                )
+                ?.nextPage
+        }
+    }
 
-                    remoteKeyDao.clearRemoteKey(
-                        searchQuery = searchQuery,
-                    )
-                }
+    private suspend fun loadAndPersistPage(
+        loadType: LoadType,
+        page: Int,
+    ): MediatorResult {
+        val response = loadPageWithRateLimitRetry(
+            page = page,
+        )
 
-                val startPosition = characterDao
-                    .getCharacterQueryCount(
-                        searchQuery = searchQuery,
-                    )
+        val endOfPaginationReached =
+            response.info.next == null
 
-                characterDao.upsertCharacters(
-                    characters = response.results.map { characterDto ->
-                        characterDto.toEntity()
-                    },
+        persistPage(
+            loadType = loadType,
+            page = page,
+            response = response,
+            requestCompletedAtMillis = currentTimeMillis(),
+        )
+
+        return MediatorResult.Success(
+            endOfPaginationReached = endOfPaginationReached,
+        )
+    }
+
+    private suspend fun persistPage(
+        loadType: LoadType,
+        page: Int,
+        response: CharacterResponseDto,
+        requestCompletedAtMillis: Long,
+    ) {
+        database.withTransaction {
+            val characterDao = database.characterDao()
+            val remoteKeyDao = database.remoteKeyDao()
+
+            val previousRemoteKey = remoteKeyDao
+                .getRemoteKey(
+                    searchQuery = searchQuery,
                 )
 
-                characterDao.upsertCharacterQueries(
-                    characterQueries = response.results
-                        .toQueryEntities(
-                            searchQuery = searchQuery,
-                            startPosition = startPosition,
-                        ),
+            if (loadType == LoadType.REFRESH) {
+                characterDao.clearCharacterQuery(
+                    searchQuery = searchQuery,
                 )
 
-                val lastUpdatedAtMillis =
-                    if (loadType == LoadType.REFRESH) {
-                        requestCompletedAtMillis
-                    } else {
-                        previousRemoteKey
-                            ?.lastUpdatedAtMillis
-                            ?: requestCompletedAtMillis
-                    }
-
-                remoteKeyDao.upsertRemoteKey(
-                    remoteKey = RemoteKeyEntity(
-                        searchQuery = searchQuery,
-                        nextPage = if (endOfPaginationReached) {
-                            null
-                        } else {
-                            page + 1
-                        },
-                        lastUpdatedAtMillis = lastUpdatedAtMillis,
-                    ),
+                remoteKeyDao.clearRemoteKey(
+                    searchQuery = searchQuery,
                 )
             }
 
-            MediatorResult.Success(
-                endOfPaginationReached = endOfPaginationReached,
+            val startPosition = characterDao
+                .getCharacterQueryCount(
+                    searchQuery = searchQuery,
+                )
+
+            characterDao.upsertCharacters(
+                characters = response.results.map { characterDto ->
+                    characterDto.toEntity()
+                },
             )
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: HttpException) {
-            if (
-                exception.code() == HTTP_NOT_FOUND &&
-                remoteName != null
-            ) {
+
+            characterDao.upsertCharacterQueries(
+                characterQueries = response.results
+                    .toQueryEntities(
+                        searchQuery = searchQuery,
+                        startPosition = startPosition,
+                    ),
+            )
+
+            remoteKeyDao.upsertRemoteKey(
+                remoteKey = RemoteKeyEntity(
+                    searchQuery = searchQuery,
+                    nextPage = if (response.info.next == null) {
+                        null
+                    } else {
+                        page + 1
+                    },
+                    lastUpdatedAtMillis = resolveCacheTimestamp(
+                        loadType = loadType,
+                        previousRemoteKey = previousRemoteKey,
+                        requestCompletedAtMillis =
+                            requestCompletedAtMillis,
+                    ),
+                ),
+            )
+        }
+    }
+
+    private fun resolveCacheTimestamp(
+        loadType: LoadType,
+        previousRemoteKey: RemoteKeyEntity?,
+        requestCompletedAtMillis: Long,
+    ): Long {
+        return if (loadType == LoadType.REFRESH) {
+            requestCompletedAtMillis
+        } else {
+            previousRemoteKey
+                ?.lastUpdatedAtMillis
+                ?: requestCompletedAtMillis
+        }
+    }
+
+    private suspend fun handleLoadFailure(
+        loadType: LoadType,
+        throwable: Throwable,
+    ): MediatorResult {
+        return when {
+            throwable is CancellationException -> {
+                throw throwable
+            }
+
+            throwable is HttpException &&
+                    throwable.code() == HTTP_NOT_FOUND &&
+                    remoteName != null -> {
                 handleSearchNotFound(
                     loadType = loadType,
                 )
-            } else {
+            }
+
+            else -> {
                 MediatorResult.Error(
-                    exception.toDomainFailure(),
+                    throwable.toDomainFailure(),
                 )
             }
-        } catch (exception: Throwable) {
-            MediatorResult.Error(
-                exception.toDomainFailure(),
-            )
         }
     }
 
@@ -222,8 +268,8 @@ class CharacterRemoteMediator(
 
                 LoadType.APPEND -> {
                     /*
-                     * Preserve already cached search results while marking the
-                     * remote pagination as complete.
+                     * Preserve cached search results while marking remote
+                     * pagination as complete.
                      */
                     val currentRemoteKey = remoteKeyDao
                         .getRemoteKey(
@@ -252,26 +298,28 @@ class CharacterRemoteMediator(
 
     private suspend fun loadPageWithRateLimitRetry(
         page: Int,
-    ) = try {
-        api.getCharacters(
-            page = page,
-            name = remoteName,
-        )
-    } catch (exception: HttpException) {
-        if (exception.code() != HTTP_TOO_MANY_REQUESTS) {
-            throw exception
+    ): CharacterResponseDto {
+        return try {
+            api.getCharacters(
+                page = page,
+                name = remoteName,
+            )
+        } catch (exception: HttpException) {
+            if (exception.code() != HTTP_TOO_MANY_REQUESTS) {
+                throw exception
+            }
+
+            delay(
+                rateLimitRetryDelay(
+                    exception = exception,
+                ).milliseconds,
+            )
+
+            api.getCharacters(
+                page = page,
+                name = remoteName,
+            )
         }
-
-        delay(
-            rateLimitRetryDelay(
-                exception = exception,
-            ).milliseconds,
-        )
-
-        api.getCharacters(
-            page = page,
-            name = remoteName,
-        )
     }
 
     private fun rateLimitRetryDelay(

@@ -30,3 +30,4 @@ abstract class MultiverseDatabase : RoomDatabase() {
 
     abstract fun remoteKeyDao(): RemoteKeyDao
 }
+

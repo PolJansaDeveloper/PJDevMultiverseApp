@@ -6,7 +6,6 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
 import androidx.room.withTransaction
-import com.pjdev.data.source.remote.paging.CharacterRemoteMediator
 import com.pjdev.data.source.local.database.MultiverseDatabase
 import com.pjdev.data.source.local.mapper.toCharacter
 import com.pjdev.data.source.local.mapper.toCharacterDetail
@@ -15,6 +14,7 @@ import com.pjdev.data.source.remote.api.RickAndMortyApi
 import com.pjdev.data.source.remote.error.toDomainFailure
 import com.pjdev.data.source.remote.mapper.toEntity
 import com.pjdev.data.source.remote.mapper.toEpisodeCrossRefs
+import com.pjdev.data.source.remote.paging.CharacterRemoteMediator
 import com.pjdev.domain.model.Character
 import com.pjdev.domain.model.CharacterDetail
 import com.pjdev.domain.repository.CharacterRepository
@@ -71,22 +71,28 @@ class CharacterRepositoryImpl @Inject constructor(
             characterId = id,
         )
 
-        return try {
+        val refreshResult = runCatching {
             refreshCharacterDetail(
                 characterId = id,
             )
+        }
 
+        val refreshFailure = refreshResult.exceptionOrNull()
+
+        if (refreshFailure is CancellationException) {
+            throw refreshFailure
+        }
+
+        return if (refreshFailure == null) {
             getCachedCharacterDetail(
                 characterId = id,
             ) ?: cachedCharacterDetail
-            ?: throw IllegalStateException(
+            ?: error(
                 "Character $id was not available after refresh.",
             )
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (throwable: Throwable) {
+        } else {
             cachedCharacterDetail
-                ?: throw throwable.toDomainFailure()
+                ?: throw refreshFailure.toDomainFailure()
         }
     }
 
@@ -117,6 +123,22 @@ class CharacterRepositoryImpl @Inject constructor(
             )
         }
 
+        /*
+         * Only create relations for episodes that were actually returned.
+         * This prevents foreign-key failures if a bulk response is partial.
+         */
+        val availableEpisodeIds = episodeDtos
+            .map { episodeDto ->
+                episodeDto.id
+            }
+            .toSet()
+
+        val episodeCrossRefs = characterDto
+            .toEpisodeCrossRefs()
+            .filter { crossRef ->
+                crossRef.episodeId in availableEpisodeIds
+            }
+
         database.withTransaction {
             val characterDao = database.characterDao()
             val episodeDao = database.episodeDao()
@@ -138,7 +160,7 @@ class CharacterRepositoryImpl @Inject constructor(
             )
 
             episodeDao.upsertCharacterEpisodeCrossRefs(
-                crossRefs = characterDto.toEpisodeCrossRefs(),
+                crossRefs = episodeCrossRefs,
             )
         }
     }

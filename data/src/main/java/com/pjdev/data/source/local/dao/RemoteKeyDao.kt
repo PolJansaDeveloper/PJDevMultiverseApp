@@ -35,3 +35,4 @@ interface RemoteKeyDao {
         searchQuery: String,
     )
 }
+

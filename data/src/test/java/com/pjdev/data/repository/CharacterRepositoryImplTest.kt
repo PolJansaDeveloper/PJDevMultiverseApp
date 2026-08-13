@@ -89,59 +89,22 @@ class CharacterRepositoryImplTest {
                 id = CHARACTER_ID,
             )
 
-            assertEquals(
-                CHARACTER_ID,
-                result.id,
-            )
+            val cachedCharacter = cachedCharacter()
+            val cachedEpisodes = cachedEpisodes()
 
-            assertEquals(
-                "Rick Sanchez",
-                result.name,
-            )
-
-            assertEquals(
-                1,
-                result.episodes.size,
-            )
-
-            assertEquals(
-                "Pilot",
-                result.episodes.first().name,
-            )
-
+            assertEquals(CHARACTER_ID, result.id)
+            assertEquals("Rick Sanchez", result.name)
+            assertEquals(1, result.episodes.size)
+            assertEquals("Pilot", result.episodes.first().name)
             assertEquals(
                 LocalDate.of(2013, 12, 2),
                 result.episodes.first().airDate,
             )
 
-            val cachedCharacter = database
-                .characterDao()
-                .getCharacterById(
-                    characterId = CHARACTER_ID,
-                )
-
-            val cachedEpisodes = database
-                .episodeDao()
-                .getEpisodesForCharacter(
-                    characterId = CHARACTER_ID,
-                )
-
             assertNotNull(cachedCharacter)
-
-            assertEquals(
-                "Rick Sanchez",
-                cachedCharacter?.name,
-            )
-
-            assertEquals(
-                1,
-                cachedEpisodes.size,
-            )
-
-            assertEquals(
-                "Pilot",
-                cachedEpisodes.first().name,
-            )
+            assertEquals("Rick Sanchez", cachedCharacter?.name)
+            assertEquals(1, cachedEpisodes.size)
+            assertEquals("Pilot", cachedEpisodes.first().name)
 
             coVerify(exactly = 1) {
                 api.getCharacter(CHARACTER_ID)
@@ -197,16 +160,11 @@ class CharacterRepositoryImplTest {
                 id = CHARACTER_ID,
             )
 
-            assertEquals(
-                2,
-                result.episodes.size,
-            )
-
+            assertEquals(2, result.episodes.size)
             assertEquals(
                 "Lawnmower Dog",
                 result.episodes[0].name,
             )
-
             assertEquals(
                 "Pilot",
                 result.episodes[1].name,
@@ -222,33 +180,76 @@ class CharacterRepositoryImplTest {
         }
 
     @Test
+    fun `partial episode response stores only available episode relations`() =
+        runTest {
+            val characterDto = createCharacterDto(
+                episodeUrls = listOf(
+                    episodeUrl(EPISODE_ONE_ID),
+                    episodeUrl(EPISODE_TWO_ID),
+                ),
+            )
+
+            val availableEpisodeDto = createEpisodeDto(
+                id = EPISODE_ONE_ID,
+                name = "Pilot",
+                code = "S01E01",
+            )
+
+            coEvery {
+                api.getCharacter(CHARACTER_ID)
+            } returns characterDto
+
+            /*
+             * Simulate an unexpected partial response from the bulk endpoint.
+             * Episode two is requested but not returned.
+             */
+            coEvery {
+                api.getEpisodes("1,2")
+            } returns listOf(
+                availableEpisodeDto,
+            )
+
+            val result = repository.getCharacterDetail(
+                id = CHARACTER_ID,
+            )
+
+            val cachedEpisodes = cachedEpisodes()
+
+            assertEquals(1, result.episodes.size)
+            assertEquals(
+                "Pilot",
+                result.episodes.first().name,
+            )
+
+            assertEquals(1, cachedEpisodes.size)
+            assertEquals(
+                EPISODE_ONE_ID,
+                cachedEpisodes.first().id,
+            )
+
+            coVerify(exactly = 1) {
+                api.getEpisodes("1,2")
+            }
+        }
+
+    @Test
     fun `network failure returns cached detail when available`() =
         runTest {
             insertCachedCharacterDetail()
 
             coEvery {
                 api.getCharacter(CHARACTER_ID)
-            } throws IOException("No internet connection")
+            } throws IOException(
+                "No internet connection",
+            )
 
             val result = repository.getCharacterDetail(
                 id = CHARACTER_ID,
             )
 
-            assertEquals(
-                CHARACTER_ID,
-                result.id,
-            )
-
-            assertEquals(
-                "Cached Rick",
-                result.name,
-            )
-
-            assertEquals(
-                1,
-                result.episodes.size,
-            )
-
+            assertEquals(CHARACTER_ID, result.id)
+            assertEquals("Cached Rick", result.name)
+            assertEquals(1, result.episodes.size)
             assertEquals(
                 "Cached Pilot",
                 result.episodes.first().name,
@@ -264,7 +265,9 @@ class CharacterRepositoryImplTest {
         runTest {
             coEvery {
                 api.getCharacter(CHARACTER_ID)
-            } throws IOException("No internet connection")
+            } throws IOException(
+                "No internet connection",
+            )
 
             val failure = runCatching {
                 repository.getCharacterDetail(
@@ -280,6 +283,20 @@ class CharacterRepositoryImplTest {
                 api.getCharacter(CHARACTER_ID)
             }
         }
+
+    private suspend fun cachedCharacter() =
+        database
+            .characterDao()
+            .getCharacterById(
+                characterId = CHARACTER_ID,
+            )
+
+    private suspend fun cachedEpisodes() =
+        database
+            .episodeDao()
+            .getEpisodesForCharacter(
+                characterId = CHARACTER_ID,
+            )
 
     private suspend fun insertCachedCharacterDetail() {
         database.characterDao().upsertCharacters(

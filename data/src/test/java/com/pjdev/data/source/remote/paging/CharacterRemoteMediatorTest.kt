@@ -144,22 +144,16 @@ class CharacterRemoteMediatorTest {
                 hasNextPage = true,
             )
 
-            val mediator = createMediator(
-                name = null,
-            )
-
-            val result = mediator.load(
+            val result = load(
+                mediator = createMediator(
+                    name = null,
+                ),
                 loadType = LoadType.REFRESH,
-                state = createPagingState(),
             )
 
-            assertTrue(
-                result is RemoteMediator.MediatorResult.Success,
-            )
-
-            assertFalse(
-                (result as RemoteMediator.MediatorResult.Success)
-                    .endOfPaginationReached,
+            assertSuccessfulLoad(
+                result = result,
+                endOfPaginationReached = false,
             )
 
             val cachedCharacter = database
@@ -168,35 +162,23 @@ class CharacterRemoteMediatorTest {
                     characterId = CHARACTER_ONE_ID,
                 )
 
-            val cachedCount = database
-                .characterDao()
-                .getCharacterQueryCount(
-                    searchQuery = "",
-                )
-
-            val remoteKey = database
-                .remoteKeyDao()
-                .getRemoteKey(
-                    searchQuery = "",
-                )
+            val remoteKey = remoteKey(
+                searchQuery = "",
+            )
 
             assertNotNull(cachedCharacter)
-
             assertEquals(
                 "Rick Sanchez",
                 cachedCharacter?.name,
             )
-
             assertEquals(
                 1,
-                cachedCount,
+                cachedCount(""),
             )
-
             assertEquals(
                 2,
                 remoteKey?.nextPage,
             )
-
             assertEquals(
                 CURRENT_TIME_MILLIS,
                 remoteKey?.lastUpdatedAtMillis,
@@ -234,49 +216,29 @@ class CharacterRemoteMediatorTest {
                 hasNextPage = false,
             )
 
-            val mediator = createMediator(
-                name = SEARCH_NAME,
-            )
-
-            val result = mediator.load(
+            val result = load(
+                mediator = createMediator(
+                    name = SEARCH_NAME,
+                ),
                 loadType = LoadType.APPEND,
-                state = createPagingState(),
             )
 
-            assertTrue(
-                result is RemoteMediator.MediatorResult.Success,
+            assertSuccessfulLoad(
+                result = result,
+                endOfPaginationReached = true,
             )
 
-            assertTrue(
-                (result as RemoteMediator.MediatorResult.Success)
-                    .endOfPaginationReached,
+            val remoteKey = remoteKey(
+                searchQuery = SEARCH_QUERY,
             )
-
-            val cachedCount = database
-                .characterDao()
-                .getCharacterQueryCount(
-                    searchQuery = SEARCH_QUERY,
-                )
-
-            val remoteKey = database
-                .remoteKeyDao()
-                .getRemoteKey(
-                    searchQuery = SEARCH_QUERY,
-                )
 
             assertEquals(
                 2,
-                cachedCount,
+                cachedCount(SEARCH_QUERY),
             )
-
             assertNull(
                 remoteKey?.nextPage,
             )
-
-            /*
-             * APPEND must not change cache freshness.
-             * Freshness represents the last successful REFRESH.
-             */
             assertEquals(
                 FRESH_CACHE_TIME_MILLIS,
                 remoteKey?.lastUpdatedAtMillis,
@@ -308,24 +270,16 @@ class CharacterRemoteMediatorTest {
                 "No internet connection",
             )
 
-            val mediator = createMediator(
-                name = SEARCH_NAME,
-            )
-
-            val result = mediator.load(
+            val result = load(
+                mediator = createMediator(
+                    name = SEARCH_NAME,
+                ),
                 loadType = LoadType.REFRESH,
-                state = createPagingState(),
             )
 
             assertTrue(
                 result is RemoteMediator.MediatorResult.Error,
             )
-
-            val cachedCount = database
-                .characterDao()
-                .getCharacterQueryCount(
-                    searchQuery = SEARCH_QUERY,
-                )
 
             val cachedCharacter = database
                 .characterDao()
@@ -333,15 +287,13 @@ class CharacterRemoteMediatorTest {
                     characterId = CHARACTER_ONE_ID,
                 )
 
-            val remoteKey = database
-                .remoteKeyDao()
-                .getRemoteKey(
-                    searchQuery = SEARCH_QUERY,
-                )
+            val remoteKey = remoteKey(
+                searchQuery = SEARCH_QUERY,
+            )
 
             assertEquals(
                 1,
-                cachedCount,
+                cachedCount(SEARCH_QUERY),
             )
 
             assertNotNull(
@@ -376,40 +328,22 @@ class CharacterRemoteMediatorTest {
                 code = HTTP_NOT_FOUND,
             )
 
-            val mediator = createMediator(
-                name = SEARCH_NAME,
-            )
-
-            val result = mediator.load(
+            val result = load(
+                mediator = createMediator(
+                    name = SEARCH_NAME,
+                ),
                 loadType = LoadType.REFRESH,
-                state = createPagingState(),
             )
 
-            assertTrue(
-                result is RemoteMediator.MediatorResult.Success,
+            assertSuccessfulLoad(
+                result = result,
+                endOfPaginationReached = true,
             )
 
-            assertTrue(
-                (result as RemoteMediator.MediatorResult.Success)
-                    .endOfPaginationReached,
+            val remoteKey = remoteKey(
+                searchQuery = SEARCH_QUERY,
             )
 
-            val cachedCount = database
-                .characterDao()
-                .getCharacterQueryCount(
-                    searchQuery = SEARCH_QUERY,
-                )
-
-            val remoteKey = database
-                .remoteKeyDao()
-                .getRemoteKey(
-                    searchQuery = SEARCH_QUERY,
-                )
-
-            /*
-             * The shared character entity remains cached.
-             * Only this search query membership is removed.
-             */
             val cachedCharacter = database
                 .characterDao()
                 .getCharacterById(
@@ -418,13 +352,17 @@ class CharacterRemoteMediatorTest {
 
             assertEquals(
                 0,
-                cachedCount,
+                cachedCount(SEARCH_QUERY),
             )
 
             assertNull(
                 remoteKey,
             )
 
+            /*
+             * The shared entity remains cached.
+             * Only its membership in this search is removed.
+             */
             assertNotNull(
                 cachedCharacter,
             )
@@ -448,39 +386,25 @@ class CharacterRemoteMediatorTest {
                 code = HTTP_NOT_FOUND,
             )
 
-            val mediator = createMediator(
-                name = SEARCH_NAME,
-            )
-
-            val result = mediator.load(
+            val result = load(
+                mediator = createMediator(
+                    name = SEARCH_NAME,
+                ),
                 loadType = LoadType.APPEND,
-                state = createPagingState(),
             )
 
-            assertTrue(
-                result is RemoteMediator.MediatorResult.Success,
+            assertSuccessfulLoad(
+                result = result,
+                endOfPaginationReached = true,
             )
 
-            assertTrue(
-                (result as RemoteMediator.MediatorResult.Success)
-                    .endOfPaginationReached,
+            val remoteKey = remoteKey(
+                searchQuery = SEARCH_QUERY,
             )
-
-            val cachedCount = database
-                .characterDao()
-                .getCharacterQueryCount(
-                    searchQuery = SEARCH_QUERY,
-                )
-
-            val remoteKey = database
-                .remoteKeyDao()
-                .getRemoteKey(
-                    searchQuery = SEARCH_QUERY,
-                )
 
             assertEquals(
                 1,
-                cachedCount,
+                cachedCount(SEARCH_QUERY),
             )
 
             assertNull(
@@ -492,6 +416,51 @@ class CharacterRemoteMediatorTest {
                 remoteKey?.lastUpdatedAtMillis,
             )
         }
+
+    private suspend fun load(
+        mediator: CharacterRemoteMediator,
+        loadType: LoadType,
+    ): RemoteMediator.MediatorResult {
+        return mediator.load(
+            loadType = loadType,
+            state = createPagingState(),
+        )
+    }
+
+    private fun assertSuccessfulLoad(
+        result: RemoteMediator.MediatorResult,
+        endOfPaginationReached: Boolean,
+    ) {
+        assertTrue(
+            result is RemoteMediator.MediatorResult.Success,
+        )
+
+        assertEquals(
+            endOfPaginationReached,
+            (result as RemoteMediator.MediatorResult.Success)
+                .endOfPaginationReached,
+        )
+    }
+
+    private suspend fun cachedCount(
+        searchQuery: String,
+    ): Int {
+        return database
+            .characterDao()
+            .getCharacterQueryCount(
+                searchQuery = searchQuery,
+            )
+    }
+
+    private suspend fun remoteKey(
+        searchQuery: String,
+    ): RemoteKeyEntity? {
+        return database
+            .remoteKeyDao()
+            .getRemoteKey(
+                searchQuery = searchQuery,
+            )
+    }
 
     private fun createMediator(
         name: String?,

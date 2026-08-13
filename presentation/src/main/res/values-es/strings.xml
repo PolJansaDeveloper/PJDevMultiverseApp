@@ -2,7 +2,6 @@
 <resources>
 
     <!-- App -->
-    <string name="app_name">Multiverse</string>
 
     <!-- Character list -->
     <string name="character_list_title">Multiverse</string>
