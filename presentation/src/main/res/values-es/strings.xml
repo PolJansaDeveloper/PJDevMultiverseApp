@@ -2,7 +2,6 @@
 <resources>
 
     <!-- App -->
-    <string name="app_name">Multiverse</string>
 
     <!-- Character list -->
     <string name="character_list_title">Multiverse</string>
@@ -43,7 +42,6 @@
     <string name="retry">Reintentar</string>
 
     <!-- Accessibility -->
-    <string name="accessibility_character_card">Abrir detalles de %1$s</string>
     <string name="accessibility_search_clear">Borrar búsqueda</string>
 
 </resources>

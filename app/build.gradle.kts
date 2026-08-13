@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -58,9 +59,6 @@ dependencies {
     // Android application entry point with Compose support.
     implementation(libs.androidx.activity.compose)
 
-    // Unit testing.
-    testImplementation(libs.junit)
-
     // Dependency injection.
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -71,6 +69,9 @@ dependencies {
 
     // Provides a consistent splash screen across supported Android versions.
     implementation(libs.androidx.core.splashscreen)
+
+    //Serialize
+    implementation(libs.kotlinx.serialization.json)
 
 }
 

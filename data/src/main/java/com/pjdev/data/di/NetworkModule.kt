@@ -1,7 +1,7 @@
 package com.pjdev.data.di
 
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
-import com.pjdev.data.remote.api.RickAndMortyApi
+import com.pjdev.data.source.remote.api.RickAndMortyApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

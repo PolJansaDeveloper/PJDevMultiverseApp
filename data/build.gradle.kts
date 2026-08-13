@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.androidx.room)
 }
 
 android {
@@ -43,6 +44,16 @@ android {
         warningsAsErrors = false
     }
 
+    sourceSets {
+        getByName("androidTest") {
+            assets.srcDir("$projectDir/schemas")
+        }
+    }
+
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
@@ -61,12 +72,27 @@ dependencies {
     // Paging.
     implementation(libs.androidx.paging.common)
 
+    // Local persistence.
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.paging)
+    ksp(libs.androidx.room.compiler)
+
     // Coroutines.
     implementation(libs.kotlinx.coroutines.core)
 
-    // Testing.
+// Unit testing.
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.robolectric)
+
+// Instrumented testing.
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.room.testing)
+
+
 }
 
 

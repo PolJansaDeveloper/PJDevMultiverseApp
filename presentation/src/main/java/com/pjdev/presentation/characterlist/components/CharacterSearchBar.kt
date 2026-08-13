@@ -13,13 +13,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.tooling.preview.Preview
 import com.pjdev.presentation.R
 import com.pjdev.presentation.theme.MultiverseSpacing
 import com.pjdev.presentation.theme.MultiverseTheme
+import com.pjdev.presentation.theme.ThemePreviews
 
 @Composable
 fun CharacterSearchBar(
@@ -36,7 +37,7 @@ fun CharacterSearchBar(
         value = query,
         onValueChange = onQueryChange,
         modifier = modifier.fillMaxWidth(),
-        placeholder = {
+        label = {
             Text(
                 text = stringResource(
                     R.string.character_search_hint,
@@ -45,8 +46,6 @@ fun CharacterSearchBar(
         },
         trailingIcon = {
             if (query.isNotEmpty()) {
-                // The clear action is exposed explicitly to accessibility services
-                // instead of relying on the visual symbol to communicate its purpose.
                 IconButton(
                     onClick = {
                         onQueryChange("")
@@ -56,8 +55,13 @@ fun CharacterSearchBar(
                         contentDescription = clearSearchDescription
                     },
                 ) {
+                    /*
+                     * The symbol is purely visual. The IconButton exposes
+                     * the meaningful accessibility description.
+                     */
                     Text(
                         text = CLEAR_SEARCH_SYMBOL,
+                        modifier = Modifier.clearAndSetSemantics {},
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -72,42 +76,34 @@ fun CharacterSearchBar(
         ),
         keyboardActions = KeyboardActions(
             onSearch = {
-                // Search requests are already driven by the debounced query Flow;
-                // the keyboard action only dismisses the keyboard.
+                /*
+                 * Search requests are driven by the debounced query Flow,
+                 * so this action only dismisses the keyboard.
+                 */
                 focusManager.clearFocus()
             },
         ),
     )
 }
 
-@Preview(
-    name = "Search bar - Light",
-    showBackground = true,
-)
+@ThemePreviews
 @Composable
-private fun CharacterSearchBarLightPreview() {
-    MultiverseTheme(
-        darkTheme = false,
-    ) {
+private fun CharacterSearchBarEmptyPreview() {
+    MultiverseTheme {
         CharacterSearchBar(
-            query = "Rick",
+            query = "",
             onQueryChange = {},
             modifier = Modifier.padding(MultiverseSpacing.medium),
         )
     }
 }
 
-@Preview(
-    name = "Search bar - Dark",
-    showBackground = true,
-)
+@ThemePreviews
 @Composable
-private fun CharacterSearchBarDarkPreview() {
-    MultiverseTheme(
-        darkTheme = true,
-    ) {
+private fun CharacterSearchBarFilledPreview() {
+    MultiverseTheme {
         CharacterSearchBar(
-            query = "",
+            query = "Rick",
             onQueryChange = {},
             modifier = Modifier.padding(MultiverseSpacing.medium),
         )

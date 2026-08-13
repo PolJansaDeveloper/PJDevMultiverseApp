@@ -1,90 +1,348 @@
 package com.pjdev.data.repository
 
-import com.pjdev.data.remote.api.RickAndMortyApi
-import com.pjdev.data.remote.dto.CharacterDto
-import com.pjdev.data.remote.dto.CharacterResponseDto
-import com.pjdev.data.remote.dto.EpisodeDto
-import com.pjdev.data.remote.dto.LocationDto
-import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import android.content.Context
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import com.pjdev.data.source.local.database.MultiverseDatabase
+import com.pjdev.data.source.local.entity.CharacterEntity
+import com.pjdev.data.source.local.entity.CharacterEpisodeCrossRef
+import com.pjdev.data.source.local.entity.EpisodeEntity
+import com.pjdev.data.source.remote.api.RickAndMortyApi
+import com.pjdev.data.source.remote.dto.CharacterDto
+import com.pjdev.data.source.remote.dto.EpisodeDto
+import com.pjdev.data.source.remote.dto.LocationDto
+import com.pjdev.domain.error.DomainException
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
+import java.io.IOException
 import java.time.LocalDate
+import kotlinx.coroutines.test.runTest
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36])
 class CharacterRepositoryImplTest {
 
+    private lateinit var api: RickAndMortyApi
+    private lateinit var database: MultiverseDatabase
+    private lateinit var repository: CharacterRepositoryImpl
+
+    @Before
+    fun setUp() {
+        val context =
+            ApplicationProvider.getApplicationContext<Context>()
+
+        database = Room
+            .inMemoryDatabaseBuilder(
+                context,
+                MultiverseDatabase::class.java,
+            )
+            .allowMainThreadQueries()
+            .build()
+
+        api = mockk()
+
+        repository = CharacterRepositoryImpl(
+            api = api,
+            database = database,
+        )
+    }
+
+    @After
+    fun tearDown() {
+        database.close()
+    }
+
     @Test
-    fun `getCharacterDetail requests single episode when character has one episode`() = runTest {
-        val api = FakeRickAndMortyApi(
-            character = createCharacter(
+    fun `online detail stores character and single episode in Room`() =
+        runTest {
+            val characterDto = createCharacterDto(
                 episodeUrls = listOf(
-                    "https://rickandmortyapi.com/api/episode/1",
+                    episodeUrl(EPISODE_ONE_ID),
                 ),
-            ),
-            singleEpisode = createEpisode(
-                id = 1,
+            )
+
+            val episodeDto = createEpisodeDto(
+                id = EPISODE_ONE_ID,
                 name = "Pilot",
                 code = "S01E01",
-            ),
-        )
+            )
 
-        val repository = CharacterRepositoryImpl(api)
+            coEvery {
+                api.getCharacter(CHARACTER_ID)
+            } returns characterDto
 
-        val result = repository.getCharacterDetail(1)
+            coEvery {
+                api.getEpisode(EPISODE_ONE_ID)
+            } returns episodeDto
 
-        assertEquals(1, api.requestedEpisodeId)
-        assertNull(api.requestedEpisodeIds)
+            val result = repository.getCharacterDetail(
+                id = CHARACTER_ID,
+            )
 
-        assertEquals(1, result.id)
-        assertEquals("Rick Sanchez", result.name)
-        assertEquals(1, result.episodes.size)
+            val cachedCharacter = cachedCharacter()
+            val cachedEpisodes = cachedEpisodes()
 
-        assertEquals(
-            LocalDate.of(2013, 12, 2),
-            result.episodes.first().airDate,
-        )
-    }
+            assertEquals(CHARACTER_ID, result.id)
+            assertEquals("Rick Sanchez", result.name)
+            assertEquals(1, result.episodes.size)
+            assertEquals("Pilot", result.episodes.first().name)
+            assertEquals(
+                LocalDate.of(2013, 12, 2),
+                result.episodes.first().airDate,
+            )
+
+            assertNotNull(cachedCharacter)
+            assertEquals("Rick Sanchez", cachedCharacter?.name)
+            assertEquals(1, cachedEpisodes.size)
+            assertEquals("Pilot", cachedEpisodes.first().name)
+
+            coVerify(exactly = 1) {
+                api.getCharacter(CHARACTER_ID)
+            }
+
+            coVerify(exactly = 1) {
+                api.getEpisode(EPISODE_ONE_ID)
+            }
+
+            coVerify(exactly = 0) {
+                api.getEpisodes(any())
+            }
+        }
 
     @Test
-    fun `getCharacterDetail requests episodes in bulk when character has multiple episodes`() = runTest {
-        val api = FakeRickAndMortyApi(
-            character = createCharacter(
+    fun `multiple episodes preserve character episode order`() =
+        runTest {
+            val characterDto = createCharacterDto(
                 episodeUrls = listOf(
-                    "https://rickandmortyapi.com/api/episode/1",
-                    "https://rickandmortyapi.com/api/episode/2",
+                    episodeUrl(EPISODE_TWO_ID),
+                    episodeUrl(EPISODE_ONE_ID),
                 ),
-            ),
-            multipleEpisodes = listOf(
-                createEpisode(
-                    id = 1,
-                    name = "Pilot",
-                    code = "S01E01",
+            )
+
+            val firstEpisodeDto = createEpisodeDto(
+                id = EPISODE_ONE_ID,
+                name = "Pilot",
+                code = "S01E01",
+            )
+
+            val secondEpisodeDto = createEpisodeDto(
+                id = EPISODE_TWO_ID,
+                name = "Lawnmower Dog",
+                code = "S01E02",
+            )
+
+            coEvery {
+                api.getCharacter(CHARACTER_ID)
+            } returns characterDto
+
+            /*
+             * The API response is intentionally returned in a different order
+             * to verify that Room uses the cross-reference position.
+             */
+            coEvery {
+                api.getEpisodes("2,1")
+            } returns listOf(
+                firstEpisodeDto,
+                secondEpisodeDto,
+            )
+
+            val result = repository.getCharacterDetail(
+                id = CHARACTER_ID,
+            )
+
+            assertEquals(2, result.episodes.size)
+            assertEquals(
+                "Lawnmower Dog",
+                result.episodes[0].name,
+            )
+            assertEquals(
+                "Pilot",
+                result.episodes[1].name,
+            )
+
+            coVerify(exactly = 1) {
+                api.getEpisodes("2,1")
+            }
+
+            coVerify(exactly = 0) {
+                api.getEpisode(any())
+            }
+        }
+
+    @Test
+    fun `partial episode response stores only available episode relations`() =
+        runTest {
+            val characterDto = createCharacterDto(
+                episodeUrls = listOf(
+                    episodeUrl(EPISODE_ONE_ID),
+                    episodeUrl(EPISODE_TWO_ID),
                 ),
-                createEpisode(
-                    id = 2,
-                    name = "Lawnmower Dog",
-                    code = "S01E02",
+            )
+
+            val availableEpisodeDto = createEpisodeDto(
+                id = EPISODE_ONE_ID,
+                name = "Pilot",
+                code = "S01E01",
+            )
+
+            coEvery {
+                api.getCharacter(CHARACTER_ID)
+            } returns characterDto
+
+            /*
+             * Simulate an unexpected partial response from the bulk endpoint.
+             * Episode two is requested but not returned.
+             */
+            coEvery {
+                api.getEpisodes("1,2")
+            } returns listOf(
+                availableEpisodeDto,
+            )
+
+            val result = repository.getCharacterDetail(
+                id = CHARACTER_ID,
+            )
+
+            val cachedEpisodes = cachedEpisodes()
+
+            assertEquals(1, result.episodes.size)
+            assertEquals(
+                "Pilot",
+                result.episodes.first().name,
+            )
+
+            assertEquals(1, cachedEpisodes.size)
+            assertEquals(
+                EPISODE_ONE_ID,
+                cachedEpisodes.first().id,
+            )
+
+            coVerify(exactly = 1) {
+                api.getEpisodes("1,2")
+            }
+        }
+
+    @Test
+    fun `network failure returns cached detail when available`() =
+        runTest {
+            insertCachedCharacterDetail()
+
+            coEvery {
+                api.getCharacter(CHARACTER_ID)
+            } throws IOException(
+                "No internet connection",
+            )
+
+            val result = repository.getCharacterDetail(
+                id = CHARACTER_ID,
+            )
+
+            assertEquals(CHARACTER_ID, result.id)
+            assertEquals("Cached Rick", result.name)
+            assertEquals(1, result.episodes.size)
+            assertEquals(
+                "Cached Pilot",
+                result.episodes.first().name,
+            )
+
+            coVerify(exactly = 1) {
+                api.getCharacter(CHARACTER_ID)
+            }
+        }
+
+    @Test
+    fun `network failure without cache returns network domain error`() =
+        runTest {
+            coEvery {
+                api.getCharacter(CHARACTER_ID)
+            } throws IOException(
+                "No internet connection",
+            )
+
+            val failure = runCatching {
+                repository.getCharacterDetail(
+                    id = CHARACTER_ID,
+                )
+            }.exceptionOrNull()
+
+            assertTrue(
+                failure is DomainException.Network,
+            )
+
+            coVerify(exactly = 1) {
+                api.getCharacter(CHARACTER_ID)
+            }
+        }
+
+    private suspend fun cachedCharacter() =
+        database
+            .characterDao()
+            .getCharacterById(
+                characterId = CHARACTER_ID,
+            )
+
+    private suspend fun cachedEpisodes() =
+        database
+            .episodeDao()
+            .getEpisodesForCharacter(
+                characterId = CHARACTER_ID,
+            )
+
+    private suspend fun insertCachedCharacterDetail() {
+        database.characterDao().upsertCharacters(
+            characters = listOf(
+                CharacterEntity(
+                    id = CHARACTER_ID,
+                    name = "Cached Rick",
+                    status = "Alive",
+                    species = "Human",
+                    origin = "Cached Earth",
+                    location = "Cached Citadel",
+                    imageUrl = "https://example.com/cached-rick.jpg",
+                    episodeCount = 1,
                 ),
             ),
         )
 
-        val repository = CharacterRepositoryImpl(api)
+        database.episodeDao().upsertEpisodes(
+            episodes = listOf(
+                EpisodeEntity(
+                    id = EPISODE_ONE_ID,
+                    name = "Cached Pilot",
+                    code = "S01E01",
+                    airDate = "2013-12-02",
+                ),
+            ),
+        )
 
-        val result = repository.getCharacterDetail(1)
-
-        assertNull(api.requestedEpisodeId)
-        assertEquals("1,2", api.requestedEpisodeIds)
-
-        assertEquals(2, result.episodes.size)
-        assertEquals("Pilot", result.episodes[0].name)
-        assertEquals("Lawnmower Dog", result.episodes[1].name)
+        database
+            .episodeDao()
+            .upsertCharacterEpisodeCrossRefs(
+                crossRefs = listOf(
+                    CharacterEpisodeCrossRef(
+                        characterId = CHARACTER_ID,
+                        episodeId = EPISODE_ONE_ID,
+                        position = 0,
+                    ),
+                ),
+            )
     }
 
-    private fun createCharacter(
+    private fun createCharacterDto(
         episodeUrls: List<String>,
     ): CharacterDto {
         return CharacterDto(
-            id = 1,
+            id = CHARACTER_ID,
             name = "Rick Sanchez",
             status = "Alive",
             species = "Human",
@@ -99,7 +357,7 @@ class CharacterRepositoryImplTest {
         )
     }
 
-    private fun createEpisode(
+    private fun createEpisodeDto(
         id: Int,
         name: String,
         code: String,
@@ -112,43 +370,16 @@ class CharacterRepositoryImplTest {
         )
     }
 
-    private class FakeRickAndMortyApi(
-        private val character: CharacterDto,
-        private val singleEpisode: EpisodeDto? = null,
-        private val multipleEpisodes: List<EpisodeDto> = emptyList(),
-    ) : RickAndMortyApi {
+    private fun episodeUrl(
+        episodeId: Int,
+    ): String {
+        return "https://rickandmortyapi.com/api/episode/$episodeId"
+    }
 
-        var requestedEpisodeId: Int? = null
-            private set
+    private companion object {
+        const val CHARACTER_ID = 1
 
-        var requestedEpisodeIds: String? = null
-            private set
-
-        override suspend fun getCharacters(
-            page: Int,
-            name: String?,
-        ): CharacterResponseDto {
-            error("Not required for this test")
-        }
-
-        override suspend fun getCharacter(
-            id: Int,
-        ): CharacterDto {
-            return character
-        }
-
-        override suspend fun getEpisode(
-            id: Int,
-        ): EpisodeDto {
-            requestedEpisodeId = id
-            return requireNotNull(singleEpisode)
-        }
-
-        override suspend fun getEpisodes(
-            ids: String,
-        ): List<EpisodeDto> {
-            requestedEpisodeIds = ids
-            return multipleEpisodes
-        }
+        const val EPISODE_ONE_ID = 1
+        const val EPISODE_TWO_ID = 2
     }
 }

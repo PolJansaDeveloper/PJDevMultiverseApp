@@ -1,26 +1,43 @@
 package com.pjdev.data.repository
 
+import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import com.pjdev.data.paging.CharacterPagingSource
-import com.pjdev.data.remote.api.RickAndMortyApi
-import com.pjdev.data.remote.error.toDomainFailure
-import com.pjdev.data.remote.mapper.toCharacterDetail
-import com.pjdev.data.remote.mapper.toEpisode
+import androidx.paging.map
+import androidx.room.withTransaction
+import com.pjdev.data.source.local.database.MultiverseDatabase
+import com.pjdev.data.source.local.mapper.toCharacter
+import com.pjdev.data.source.local.mapper.toCharacterDetail
+import com.pjdev.data.source.local.mapper.toEpisode
+import com.pjdev.data.source.remote.api.RickAndMortyApi
+import com.pjdev.data.source.remote.error.toDomainFailure
+import com.pjdev.data.source.remote.mapper.toEntity
+import com.pjdev.data.source.remote.mapper.toEpisodeCrossRefs
+import com.pjdev.data.source.remote.paging.CharacterRemoteMediator
 import com.pjdev.domain.model.Character
 import com.pjdev.domain.model.CharacterDetail
 import com.pjdev.domain.repository.CharacterRepository
+import java.util.Locale
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class CharacterRepositoryImpl @Inject constructor(
     private val api: RickAndMortyApi,
+    private val database: MultiverseDatabase,
 ) : CharacterRepository {
 
+    @OptIn(ExperimentalPagingApi::class)
     override fun getCharacters(
         name: String?,
     ): Flow<PagingData<Character>> {
+        val searchQuery = name
+            ?.trim()
+            ?.lowercase(Locale.ROOT)
+            .orEmpty()
+
         return Pager(
             config = PagingConfig(
                 pageSize = PAGE_SIZE,
@@ -28,43 +45,148 @@ class CharacterRepositoryImpl @Inject constructor(
                 prefetchDistance = PREFETCH_DISTANCE,
                 enablePlaceholders = false,
             ),
+            remoteMediator = CharacterRemoteMediator(
+                api = api,
+                database = database,
+                name = name,
+            ),
             pagingSourceFactory = {
-                CharacterPagingSource(
-                    api = api,
-                    name = name,
-                )
+                database
+                    .characterDao()
+                    .getCharactersPagingSource(
+                        searchQuery = searchQuery,
+                    )
             },
-        ).flow
+        ).flow.map { pagingData ->
+            pagingData.map { characterEntity ->
+                characterEntity.toCharacter()
+            }
+        }
     }
 
     override suspend fun getCharacterDetail(
         id: Int,
     ): CharacterDetail {
-        return runCatching {
-            val character = api.getCharacter(id)
+        val cachedCharacterDetail = getCachedCharacterDetail(
+            characterId = id,
+        )
 
-            val episodeIds = character.episode.mapNotNull { episodeUrl ->
-                episodeUrl.substringAfterLast('/').toIntOrNull()
-            }
-
-            val episodes = when (episodeIds.size) {
-                0 -> emptyList()
-
-                1 -> listOf(
-                    api.getEpisode(episodeIds.first()).toEpisode(),
-                )
-
-                else -> api.getEpisodes(
-                    episodeIds.joinToString(","),
-                ).map { episode ->
-                    episode.toEpisode()
-                }
-            }
-
-            character.toCharacterDetail(episodes)
-        }.getOrElse { throwable ->
-            throw throwable.toDomainFailure()
+        val refreshResult = runCatching {
+            refreshCharacterDetail(
+                characterId = id,
+            )
         }
+
+        val refreshFailure = refreshResult.exceptionOrNull()
+
+        if (refreshFailure is CancellationException) {
+            throw refreshFailure
+        }
+
+        return if (refreshFailure == null) {
+            getCachedCharacterDetail(
+                characterId = id,
+            ) ?: cachedCharacterDetail
+            ?: error(
+                "Character $id was not available after refresh.",
+            )
+        } else {
+            cachedCharacterDetail
+                ?: throw refreshFailure.toDomainFailure()
+        }
+    }
+
+    private suspend fun refreshCharacterDetail(
+        characterId: Int,
+    ) {
+        val characterDto = api.getCharacter(
+            id = characterId,
+        )
+
+        val episodeIds = characterDto.episode.mapNotNull { episodeUrl ->
+            episodeUrl
+                .substringAfterLast('/')
+                .toIntOrNull()
+        }
+
+        val episodeDtos = when (episodeIds.size) {
+            0 -> emptyList()
+
+            1 -> listOf(
+                api.getEpisode(
+                    id = episodeIds.first(),
+                ),
+            )
+
+            else -> api.getEpisodes(
+                ids = episodeIds.joinToString(","),
+            )
+        }
+
+        /*
+         * Only create relations for episodes that were actually returned.
+         * This prevents foreign-key failures if a bulk response is partial.
+         */
+        val availableEpisodeIds = episodeDtos
+            .map { episodeDto ->
+                episodeDto.id
+            }
+            .toSet()
+
+        val episodeCrossRefs = characterDto
+            .toEpisodeCrossRefs()
+            .filter { crossRef ->
+                crossRef.episodeId in availableEpisodeIds
+            }
+
+        database.withTransaction {
+            val characterDao = database.characterDao()
+            val episodeDao = database.episodeDao()
+
+            characterDao.upsertCharacters(
+                characters = listOf(
+                    characterDto.toEntity(),
+                ),
+            )
+
+            episodeDao.upsertEpisodes(
+                episodes = episodeDtos.map { episodeDto ->
+                    episodeDto.toEntity()
+                },
+            )
+
+            episodeDao.clearCharacterEpisodeCrossRefs(
+                characterId = characterId,
+            )
+
+            episodeDao.upsertCharacterEpisodeCrossRefs(
+                crossRefs = episodeCrossRefs,
+            )
+        }
+    }
+
+    private suspend fun getCachedCharacterDetail(
+        characterId: Int,
+    ): CharacterDetail? {
+        val characterEntity = database
+            .characterDao()
+            .getCharacterById(
+                characterId = characterId,
+            )
+            ?: return null
+
+        val episodes = database
+            .episodeDao()
+            .getEpisodesForCharacter(
+                characterId = characterId,
+            )
+            .map { episodeEntity ->
+                episodeEntity.toEpisode()
+            }
+
+        return characterEntity.toCharacterDetail(
+            episodes = episodes,
+        )
     }
 
     private companion object {

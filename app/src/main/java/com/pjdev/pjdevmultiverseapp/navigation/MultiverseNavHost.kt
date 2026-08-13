@@ -4,11 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
+import androidx.navigation.toRoute
 import com.pjdev.presentation.characterdetail.ui.CharacterDetailRoute
 import com.pjdev.presentation.characterdetail.viewmodel.CharacterDetailViewModel
 import com.pjdev.presentation.characterlist.ui.CharacterListRoute
@@ -21,44 +20,36 @@ fun MultiverseNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = AppRoute.CHARACTER_LIST,
+        startDestination = CharacterListDestination,
         modifier = modifier,
     ) {
-        composable(
-            route = AppRoute.CHARACTER_LIST,
-        ) {
+        composable<CharacterListDestination> {
             val viewModel: CharacterListViewModel = hiltViewModel()
 
             CharacterListRoute(
                 viewModel = viewModel,
                 onCharacterClick = { characterId ->
                     navController.navigate(
-                        AppRoute.characterDetail(characterId),
+                        CharacterDetailDestination(
+                            characterId = characterId,
+                        ),
                     )
                 },
             )
         }
 
-        composable(
-            route = AppRoute.CHARACTER_DETAIL_ROUTE,
-            arguments = listOf(
-                navArgument(AppRoute.CHARACTER_ID_ARGUMENT) {
-                    type = NavType.IntType
-                },
-            ),
-        ) { backStackEntry ->
-            val characterId = requireNotNull(
-                backStackEntry.arguments?.getInt(
-                    AppRoute.CHARACTER_ID_ARGUMENT,
-                ),
-            )
+        composable<CharacterDetailDestination> { backStackEntry ->
+            val destination =
+                backStackEntry.toRoute<CharacterDetailDestination>()
 
             val viewModel: CharacterDetailViewModel = hiltViewModel()
 
-            // Only the character ID is passed between destinations.
-            // The detail screen loads its own fresh data through its ViewModel.
+            /*
+             * Only the character ID travels between destinations.
+             * Navigation Compose serializes and restores the typed argument.
+             */
             CharacterDetailRoute(
-                characterId = characterId,
+                characterId = destination.characterId,
                 viewModel = viewModel,
                 onBackClick = {
                     navController.popBackStack()
