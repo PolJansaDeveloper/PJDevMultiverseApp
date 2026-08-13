@@ -22,16 +22,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pjdev.domain.model.Character
 import com.pjdev.presentation.R
+import com.pjdev.presentation.common.components.CharacterPortrait
 import com.pjdev.presentation.theme.MultiverseSpacing
 import com.pjdev.presentation.theme.MultiverseTheme
-import com.pjdev.presentation.common.components.CharacterPortrait
+import com.pjdev.presentation.theme.ThemePreviews
 
 @Composable
 fun CharacterCard(
@@ -39,20 +38,9 @@ fun CharacterCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val accessibilityDescription = stringResource(
-        R.string.accessibility_character_card,
-        character.name,
-    )
-
-    // Merge the card content into a single accessible element to avoid
-    // duplicated TalkBack announcements from its child composables.
     Card(
         onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .semantics(mergeDescendants = true) {
-                contentDescription = accessibilityDescription
-            },
+        modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -135,7 +123,12 @@ private fun CharacterInfo(
 
 @Composable
 private fun CharacterDetailsHint() {
+    /*
+     * This is only a visual affordance. The Card itself already exposes
+     * its click action to accessibility services.
+     */
     Row(
+        modifier = Modifier.clearAndSetSemantics {},
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -157,32 +150,10 @@ private fun CharacterDetailsHint() {
     }
 }
 
-@Preview(
-    name = "Character card - Light",
-    showBackground = true,
-)
+@ThemePreviews
 @Composable
-private fun CharacterCardLightPreview() {
-    MultiverseTheme(
-        darkTheme = false,
-    ) {
-        CharacterCard(
-            character = previewCharacter,
-            onClick = {},
-            modifier = Modifier.padding(MultiverseSpacing.medium),
-        )
-    }
-}
-
-@Preview(
-    name = "Character card - Dark",
-    showBackground = true,
-)
-@Composable
-private fun CharacterCardDarkPreview() {
-    MultiverseTheme(
-        darkTheme = true,
-    ) {
+private fun CharacterCardPreview() {
+    MultiverseTheme {
         CharacterCard(
             character = previewCharacter,
             onClick = {},

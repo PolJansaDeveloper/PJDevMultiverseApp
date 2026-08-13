@@ -16,14 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import com.pjdev.domain.model.Episode
 import com.pjdev.presentation.R
 import com.pjdev.presentation.theme.MultiverseSpacing
 import com.pjdev.presentation.theme.MultiverseTheme
+import com.pjdev.presentation.theme.ThemePreviews
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -35,7 +35,10 @@ fun EpisodeCard(
 ) {
     val locale = LocalConfiguration.current.locales[0]
 
-    // Use the current device locale instead of forcing a fixed date format.
+    /*
+     * Use the current device locale instead of forcing a fixed
+     * date representation.
+     */
     val formattedAirDate = remember(
         episode.airDate,
         locale,
@@ -53,11 +56,14 @@ fun EpisodeCard(
         formattedAirDate,
     )
 
-    // Merge the episode information into one meaningful TalkBack announcement.
+    /*
+     * The episode is presented to accessibility services as one logical
+     * element instead of exposing its visual children separately.
+     */
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) {
+            .clearAndSetSemantics {
                 contentDescription = accessibilityDescription
             },
         shape = MaterialTheme.shapes.medium,
@@ -135,31 +141,10 @@ private fun EpisodeInfo(
     }
 }
 
-@Preview(
-    name = "Episode card - Light",
-    showBackground = true,
-)
+@ThemePreviews
 @Composable
-private fun EpisodeCardLightPreview() {
-    MultiverseTheme(
-        darkTheme = false,
-    ) {
-        EpisodeCard(
-            episode = previewEpisode,
-            modifier = Modifier.padding(MultiverseSpacing.medium),
-        )
-    }
-}
-
-@Preview(
-    name = "Episode card - Dark",
-    showBackground = true,
-)
-@Composable
-private fun EpisodeCardDarkPreview() {
-    MultiverseTheme(
-        darkTheme = true,
-    ) {
+private fun EpisodeCardPreview() {
+    MultiverseTheme {
         EpisodeCard(
             episode = previewEpisode,
             modifier = Modifier.padding(MultiverseSpacing.medium),

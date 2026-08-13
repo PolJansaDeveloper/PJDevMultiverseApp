@@ -1,9 +1,9 @@
-package com.pjdev.presentation.characterlist.components
+package com.pjdev.presentation.common.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -18,21 +18,24 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import com.pjdev.presentation.R
 import com.pjdev.presentation.common.error.UiError
 import com.pjdev.presentation.theme.MultiverseSpacing
 import com.pjdev.presentation.theme.MultiverseTheme
+import com.pjdev.presentation.theme.ThemePreviews
 
 @Composable
 fun LoadingState(
+    message: String,
     modifier: Modifier = Modifier,
 ) {
-    // Announce loading state changes without interrupting the current
-    // accessibility announcement.
+    /*
+     * Loading state changes are announced politely so they do not
+     * interrupt an accessibility announcement already in progress.
+     */
     Column(
         modifier = modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .padding(MultiverseSpacing.large)
             .semantics {
                 liveRegion = LiveRegionMode.Polite
@@ -49,38 +52,7 @@ fun LoadingState(
         )
 
         Text(
-            text = stringResource(R.string.loading_characters),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-fun EmptyState(
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(MultiverseSpacing.large),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.empty_characters_title),
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(
-            modifier = Modifier.height(MultiverseSpacing.small),
-        )
-
-        Text(
-            text = stringResource(R.string.empty_characters_message),
+            text = message,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -94,27 +66,16 @@ fun ErrorState(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val title = when (error) {
-        UiError.Network -> stringResource(R.string.error_network_title)
-        UiError.NotFound -> stringResource(R.string.error_not_found_title)
-        UiError.RateLimited -> stringResource(R.string.error_rate_limited_title)
-        UiError.Server -> stringResource(R.string.error_server_title)
-        UiError.Unknown -> stringResource(R.string.error_unknown_title)
-    }
+    val title = errorTitle(error)
+    val message = errorMessage(error)
 
-    val message = when (error) {
-        UiError.Network -> stringResource(R.string.error_network_message)
-        UiError.NotFound -> stringResource(R.string.error_not_found_message)
-        UiError.RateLimited -> stringResource(R.string.error_rate_limited_message)
-        UiError.Server -> stringResource(R.string.error_server_message)
-        UiError.Unknown -> stringResource(R.string.error_unknown_message)
-    }
-
-    // The UI only understands presentation errors; infrastructure exceptions
-    // such as Retrofit or IO failures never reach this composable.
+    /*
+     * Infrastructure exceptions never reach the UI.
+     * The composable only works with presentation-level errors.
+     */
     Column(
         modifier = modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .padding(MultiverseSpacing.large)
             .semantics {
                 liveRegion = LiveRegionMode.Polite
@@ -156,32 +117,61 @@ fun ErrorState(
     }
 }
 
-@Preview(
-    name = "Loading state",
-    showBackground = true,
-)
+@Composable
+private fun errorTitle(
+    error: UiError,
+): String {
+    return when (error) {
+        UiError.Network ->
+            stringResource(R.string.error_network_title)
+
+        UiError.NotFound ->
+            stringResource(R.string.error_not_found_title)
+
+        UiError.RateLimited ->
+            stringResource(R.string.error_rate_limited_title)
+
+        UiError.Server ->
+            stringResource(R.string.error_server_title)
+
+        UiError.Unknown ->
+            stringResource(R.string.error_unknown_title)
+    }
+}
+
+@Composable
+private fun errorMessage(
+    error: UiError,
+): String {
+    return when (error) {
+        UiError.Network ->
+            stringResource(R.string.error_network_message)
+
+        UiError.NotFound ->
+            stringResource(R.string.error_not_found_message)
+
+        UiError.RateLimited ->
+            stringResource(R.string.error_rate_limited_message)
+
+        UiError.Server ->
+            stringResource(R.string.error_server_message)
+
+        UiError.Unknown ->
+            stringResource(R.string.error_unknown_message)
+    }
+}
+
+@ThemePreviews
 @Composable
 private fun LoadingStatePreview() {
     MultiverseTheme {
-        LoadingState()
+        LoadingState(
+            message = stringResource(R.string.loading),
+        )
     }
 }
 
-@Preview(
-    name = "Empty state",
-    showBackground = true,
-)
-@Composable
-private fun EmptyStatePreview() {
-    MultiverseTheme {
-        EmptyState()
-    }
-}
-
-@Preview(
-    name = "Error state",
-    showBackground = true,
-)
+@ThemePreviews
 @Composable
 private fun ErrorStatePreview() {
     MultiverseTheme {

@@ -2,7 +2,6 @@ package com.pjdev.presentation.characterdetail.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,11 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -26,9 +24,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pjdev.domain.model.CharacterDetail
@@ -38,10 +36,9 @@ import com.pjdev.presentation.characterdetail.components.CharacterDetailHeader
 import com.pjdev.presentation.characterdetail.components.EpisodeCard
 import com.pjdev.presentation.characterdetail.viewmodel.CharacterDetailUiState
 import com.pjdev.presentation.characterdetail.viewmodel.CharacterDetailViewModel
-import com.pjdev.presentation.common.error.UiError
+import com.pjdev.presentation.common.components.ErrorState
+import com.pjdev.presentation.common.components.LoadingState
 import com.pjdev.presentation.theme.MultiverseSpacing
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.ui.semantics.clearAndSetSemantics
 
 @Composable
 fun CharacterDetailRoute(
@@ -52,8 +49,10 @@ fun CharacterDetailRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // The request is triggered as a side effect of entering a character route.
-    // It only runs again when the character ID changes.
+    /*
+     * The request is triggered as a side effect of entering a character
+     * route and only runs again when the character ID changes.
+     */
     LaunchedEffect(characterId) {
         viewModel.loadCharacter(characterId)
     }
@@ -103,7 +102,9 @@ private fun CharacterDetailContent(
 ) {
     when (uiState) {
         CharacterDetailUiState.Loading -> {
-            CharacterDetailLoadingState()
+            LoadingState(
+                message = stringResource(R.string.loading),
+            )
         }
 
         is CharacterDetailUiState.Success -> {
@@ -113,7 +114,7 @@ private fun CharacterDetailContent(
         }
 
         is CharacterDetailUiState.Error -> {
-            CharacterDetailErrorState(
+            ErrorState(
                 error = uiState.error,
                 onRetry = onRetry,
             )
@@ -152,7 +153,9 @@ private fun CharacterDetailSuccessContent(
             )
 
             Text(
-                text = stringResource(R.string.character_detail_episodes),
+                text = stringResource(
+                    R.string.character_detail_episodes,
+                ),
                 modifier = Modifier.semantics {
                     heading()
                 },
@@ -161,7 +164,9 @@ private fun CharacterDetailSuccessContent(
             )
         }
 
-        // Stable episode IDs preserve item identity if the list changes.
+        /*
+         * Stable episode IDs preserve item identity if the list changes.
+         */
         items(
             items = character.episodes,
             key = { episode ->
@@ -199,10 +204,13 @@ private fun CharacterDetailTopBar(
                 onClick = onBackClick,
             ) {
                 Text(
-                    text = stringResource(R.string.character_detail_back),
+                    text = stringResource(
+                        R.string.character_detail_back,
+                    ),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
+
             Spacer(
                 modifier = Modifier.weight(1f),
             )
@@ -214,106 +222,6 @@ private fun CharacterDetailTopBar(
                 color = MaterialTheme.colorScheme.primary,
             )
         }
-    }
-}
-
-@Composable
-private fun CharacterDetailLoadingState() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(MultiverseSpacing.large),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            CircularProgressIndicator(
-                color = MaterialTheme.colorScheme.primary,
-            )
-
-            Spacer(
-                modifier = Modifier.height(MultiverseSpacing.medium),
-            )
-
-            Text(
-                text = stringResource(R.string.loading),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun CharacterDetailErrorState(
-    error: UiError,
-    onRetry: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(MultiverseSpacing.large),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = detailErrorTitle(error),
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(
-            modifier = Modifier.height(MultiverseSpacing.small),
-        )
-
-        Text(
-            text = detailErrorMessage(error),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(
-            modifier = Modifier.height(MultiverseSpacing.large),
-        )
-
-        Button(
-            onClick = onRetry,
-            shape = MaterialTheme.shapes.medium,
-        ) {
-            Text(
-                text = stringResource(R.string.retry),
-            )
-        }
-    }
-}
-
-@Composable
-private fun detailErrorTitle(
-    error: UiError,
-): String {
-    return when (error) {
-        UiError.Network -> stringResource(R.string.error_network_title)
-        UiError.NotFound -> stringResource(R.string.error_not_found_title)
-        UiError.RateLimited -> stringResource(R.string.error_rate_limited_title)
-        UiError.Server -> stringResource(R.string.error_server_title)
-        UiError.Unknown -> stringResource(R.string.error_unknown_title)
-    }
-}
-
-@Composable
-private fun detailErrorMessage(
-    error: UiError,
-): String {
-    return when (error) {
-        UiError.Network -> stringResource(R.string.error_network_message)
-        UiError.NotFound -> stringResource(R.string.error_not_found_message)
-        UiError.RateLimited -> stringResource(R.string.error_rate_limited_message)
-        UiError.Server -> stringResource(R.string.error_server_message)
-        UiError.Unknown -> stringResource(R.string.error_unknown_message)
     }
 }
 
