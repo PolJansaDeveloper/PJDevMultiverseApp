@@ -1,5 +1,6 @@
 package com.pjdev.data.paging
 
+import androidx.paging.ExperimentalPagingApi
 import androidx.paging.LoadType
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
@@ -16,7 +17,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import retrofit2.HttpException
 import kotlin.time.Duration.Companion.milliseconds
-import androidx.paging.ExperimentalPagingApi
 
 @OptIn(ExperimentalPagingApi::class)
 class CharacterRemoteMediator(
@@ -32,6 +32,36 @@ class CharacterRemoteMediator(
     private val searchQuery = remoteName
         ?.lowercase(Locale.ROOT)
         .orEmpty()
+
+    override suspend fun initialize(): InitializeAction {
+        val cachedCharacterCount = database
+            .characterDao()
+            .getCharacterQueryCount(
+                searchQuery = searchQuery,
+            )
+
+        val remoteKey = database
+            .remoteKeyDao()
+            .getRemoteKey(
+                searchQuery = searchQuery,
+            )
+
+        /*
+         * Existing cached data can be displayed immediately without forcing
+         * an initial network refresh.
+         *
+         * Skipping that refresh also prevents an offline startup failure from
+         * blocking future APPEND requests when connectivity becomes available.
+         */
+        return if (
+            cachedCharacterCount > 0 &&
+            remoteKey != null
+        ) {
+            InitializeAction.SKIP_INITIAL_REFRESH
+        } else {
+            InitializeAction.LAUNCH_INITIAL_REFRESH
+        }
+    }
 
     override suspend fun load(
         loadType: LoadType,
@@ -49,7 +79,9 @@ class CharacterRemoteMediator(
             LoadType.APPEND -> {
                 val remoteKey = database
                     .remoteKeyDao()
-                    .getRemoteKey(searchQuery)
+                    .getRemoteKey(
+                        searchQuery = searchQuery,
+                    )
 
                 val nextPage = remoteKey?.nextPage
                     ?: return MediatorResult.Success(
@@ -88,8 +120,8 @@ class CharacterRemoteMediator(
                     )
 
                 characterDao.upsertCharacters(
-                    characters = response.results.map {
-                        it.toEntity()
+                    characters = response.results.map { characterDto ->
+                        characterDto.toEntity()
                     },
                 )
 
@@ -102,7 +134,7 @@ class CharacterRemoteMediator(
                 )
 
                 remoteKeyDao.upsertRemoteKey(
-                    RemoteKeyEntity(
+                    remoteKey = RemoteKeyEntity(
                         searchQuery = searchQuery,
                         nextPage = if (endOfPaginationReached) {
                             null

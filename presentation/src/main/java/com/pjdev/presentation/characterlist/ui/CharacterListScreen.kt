@@ -83,9 +83,7 @@ fun CharacterListScreen(
 ) {
     val listState = rememberLazyListState()
 
-    val isListVisible =
-        characters.loadState.refresh is LoadState.NotLoading &&
-                characters.itemCount > 0
+    val isListVisible = characters.itemCount > 0
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -165,8 +163,7 @@ private fun CharacterListHeader() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top,
-        )
-        {
+        ) {
             Text(
                 text = stringResource(R.string.character_list_title),
                 modifier = Modifier.semantics {
@@ -204,37 +201,53 @@ private fun CharacterListContent(
     onCharacterClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val refreshState = characters.loadState.refresh
+    val sourceRefreshState = characters.loadState.source.refresh
+    val mediatorRefreshState = characters.loadState.mediator?.refresh
 
-    // Refresh belongs to the current Paging generation. Previous items must
-    // not hide loading or error states from a new search.
+    /*
+     * Room is the source of truth.
+     *
+     * Cached items remain visible even when a remote refresh fails.
+     * A full-screen network error is only shown when no local data is
+     * available to render.
+     */
     when {
-        refreshState is LoadState.Loading -> {
+        characters.itemCount > 0 -> {
+            CharacterLazyList(
+                characters = characters,
+                listState = listState,
+                onCharacterClick = onCharacterClick,
+                modifier = modifier,
+            )
+        }
+
+        sourceRefreshState is LoadState.Loading ||
+                mediatorRefreshState is LoadState.Loading -> {
             LoadingState(
                 modifier = modifier,
             )
         }
 
-        refreshState is LoadState.Error -> {
+        sourceRefreshState is LoadState.Error -> {
             CharacterListRefreshError(
                 query = query,
-                error = refreshState.error.toUiError(),
+                error = sourceRefreshState.error.toUiError(),
                 onRetry = characters::retry,
                 modifier = modifier,
             )
         }
 
-        characters.itemCount == 0 -> {
-            EmptyState(
+        mediatorRefreshState is LoadState.Error -> {
+            CharacterListRefreshError(
+                query = query,
+                error = mediatorRefreshState.error.toUiError(),
+                onRetry = characters::retry,
                 modifier = modifier,
             )
         }
 
         else -> {
-            CharacterLazyList(
-                characters = characters,
-                listState = listState,
-                onCharacterClick = onCharacterClick,
+            EmptyState(
                 modifier = modifier,
             )
         }
@@ -278,8 +291,6 @@ private fun CharacterLazyList(
             MultiverseSpacing.medium,
         ),
     ) {
-        // Stable IDs preserve item identity while Paging updates the list.
-        // contentType helps Compose reuse compatible item compositions.
         items(
             count = characters.itemCount,
             key = characters.itemKey { character ->
@@ -327,8 +338,6 @@ private fun ScrollToTopButton(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    // Scroll position changes continuously. derivedStateOf limits
-    // recomposition to actual changes in the button visibility condition.
     val showScrollToTop by remember {
         derivedStateOf {
             listState.firstVisibleItemIndex > SCROLL_TO_TOP_THRESHOLD
