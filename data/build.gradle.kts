@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.androidx.room)
 }
 
 android {
@@ -45,6 +46,10 @@ android {
 
 }
 
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
 dependencies {
     implementation(project(":domain"))
 
@@ -61,12 +66,18 @@ dependencies {
     // Paging.
     implementation(libs.androidx.paging.common)
 
+    // Local persistence.
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.paging)
+    ksp(libs.androidx.room.compiler)
+
     // Coroutines.
     implementation(libs.kotlinx.coroutines.core)
 
     // Testing.
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.room.testing)
 }
 
 

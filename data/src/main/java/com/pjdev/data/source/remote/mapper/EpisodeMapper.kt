@@ -1,6 +1,6 @@
-package com.pjdev.data.remote.mapper
+package com.pjdev.data.source.remote.mapper
 
-import com.pjdev.data.remote.dto.EpisodeDto
+import com.pjdev.data.source.remote.dto.EpisodeDto
 import com.pjdev.domain.model.Episode
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

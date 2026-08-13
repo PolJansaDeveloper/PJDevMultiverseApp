@@ -1,11 +1,10 @@
-package com.pjdev.data.remote.dto
+package com.pjdev.data.source.remote.dto
 
 import android.annotation.SuppressLint
 import kotlinx.serialization.Serializable
 
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable
-data class PageInfoDto(
-    val next: String?,
-    val prev: String?,
+data class LocationDto(
+    val name: String,
 )

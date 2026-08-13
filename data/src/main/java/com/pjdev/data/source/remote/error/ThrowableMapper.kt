@@ -1,4 +1,4 @@
-package com.pjdev.data.remote.error
+package com.pjdev.data.source.remote.error
 
 import com.pjdev.domain.error.DomainException
 import java.io.IOException

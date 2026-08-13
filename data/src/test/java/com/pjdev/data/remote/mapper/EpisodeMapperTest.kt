@@ -1,6 +1,7 @@
 package com.pjdev.data.remote.mapper
 
-import com.pjdev.data.remote.dto.EpisodeDto
+import com.pjdev.data.source.remote.dto.EpisodeDto
+import com.pjdev.data.source.remote.mapper.toEpisode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate

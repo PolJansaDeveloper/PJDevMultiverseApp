@@ -1,6 +1,6 @@
-package com.pjdev.data.remote.mapper
+package com.pjdev.data.source.remote.mapper
 
-import com.pjdev.data.remote.dto.CharacterDto
+import com.pjdev.data.source.remote.dto.CharacterDto
 import com.pjdev.domain.model.Character
 
 fun CharacterDto.toCharacter(): Character {

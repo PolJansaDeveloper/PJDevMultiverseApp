@@ -1,8 +1,8 @@
-package com.pjdev.data.remote.api
+package com.pjdev.data.source.remote.api
 
-import com.pjdev.data.remote.dto.CharacterDto
-import com.pjdev.data.remote.dto.CharacterResponseDto
-import com.pjdev.data.remote.dto.EpisodeDto
+import com.pjdev.data.source.remote.dto.CharacterDto
+import com.pjdev.data.source.remote.dto.CharacterResponseDto
+import com.pjdev.data.source.remote.dto.EpisodeDto
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query

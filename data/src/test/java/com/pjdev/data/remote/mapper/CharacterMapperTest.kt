@@ -1,7 +1,8 @@
 package com.pjdev.data.remote.mapper
 
-import com.pjdev.data.remote.dto.CharacterDto
-import com.pjdev.data.remote.dto.LocationDto
+import com.pjdev.data.source.remote.dto.CharacterDto
+import com.pjdev.data.source.remote.dto.LocationDto
+import com.pjdev.data.source.remote.mapper.toCharacter
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

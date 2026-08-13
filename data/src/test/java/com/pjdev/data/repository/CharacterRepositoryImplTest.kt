@@ -1,10 +1,10 @@
 package com.pjdev.data.repository
 
-import com.pjdev.data.remote.api.RickAndMortyApi
-import com.pjdev.data.remote.dto.CharacterDto
-import com.pjdev.data.remote.dto.CharacterResponseDto
-import com.pjdev.data.remote.dto.EpisodeDto
-import com.pjdev.data.remote.dto.LocationDto
+import com.pjdev.data.source.remote.api.RickAndMortyApi
+import com.pjdev.data.source.remote.dto.CharacterDto
+import com.pjdev.data.source.remote.dto.CharacterResponseDto
+import com.pjdev.data.source.remote.dto.EpisodeDto
+import com.pjdev.data.source.remote.dto.LocationDto
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

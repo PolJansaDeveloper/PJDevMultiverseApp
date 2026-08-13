@@ -2,9 +2,9 @@ package com.pjdev.data.paging
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.pjdev.data.remote.api.RickAndMortyApi
-import com.pjdev.data.remote.error.toDomainFailure
-import com.pjdev.data.remote.mapper.toCharacter
+import com.pjdev.data.source.remote.api.RickAndMortyApi
+import com.pjdev.data.source.remote.error.toDomainFailure
+import com.pjdev.data.source.remote.mapper.toCharacter
 import com.pjdev.domain.model.Character
 import java.io.IOException
 import kotlinx.coroutines.delay
