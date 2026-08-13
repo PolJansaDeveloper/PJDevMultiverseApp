@@ -44,6 +44,12 @@ android {
         warningsAsErrors = false
     }
 
+    sourceSets {
+        getByName("androidTest") {
+            assets.srcDir("$projectDir/schemas")
+        }
+    }
+
 }
 
 room {
@@ -74,10 +80,19 @@ dependencies {
     // Coroutines.
     implementation(libs.kotlinx.coroutines.core)
 
-    // Testing.
+// Unit testing.
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.robolectric)
+
+// Instrumented testing.
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.room.testing)
+
+
 }
 
 
