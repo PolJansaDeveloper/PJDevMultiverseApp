@@ -2,9 +2,10 @@ package com.pjdev.domain.usecase
 
 import androidx.paging.PagingData
 import com.pjdev.domain.model.Character
-import com.pjdev.domain.model.CharacterDetail
 import com.pjdev.domain.repository.CharacterRepository
-import kotlinx.coroutines.flow.Flow
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertSame
 import org.junit.Test
@@ -13,6 +14,8 @@ class GetCharactersUseCaseTest {
 
     @Test
     fun getCharactersReturnsRepositoryFlow() {
+        val repository = mockk<CharacterRepository>()
+
         val characters = listOf(
             Character(
                 id = 1,
@@ -22,24 +25,33 @@ class GetCharactersUseCaseTest {
             ),
         )
 
-        val expectedFlow = flowOf(PagingData.from(characters))
+        val expectedFlow = flowOf(
+            PagingData.from(characters),
+        )
 
-        val repository = object : CharacterRepository {
-            override fun getCharacters(
-                name: String?,
-            ): Flow<PagingData<Character>> = expectedFlow
+        every {
+            repository.getCharacters(
+                name = null,
+            )
+        } returns expectedFlow
 
-            override suspend fun getCharacterDetail(
-                id: Int,
-            ): CharacterDetail {
-                error("Not required for this test")
-            }
+        val useCase = GetCharactersUseCase(
+            characterRepository = repository,
+        )
+
+        val result = useCase(
+            name = null,
+        )
+
+        assertSame(
+            expectedFlow,
+            result,
+        )
+
+        verify(exactly = 1) {
+            repository.getCharacters(
+                name = null,
+            )
         }
-
-        val useCase = GetCharactersUseCase(repository)
-
-        val result = useCase(name = null)
-
-        assertSame(expectedFlow, result)
     }
 }
