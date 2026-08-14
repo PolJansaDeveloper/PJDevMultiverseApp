@@ -1,10 +1,10 @@
 package com.pjdev.domain.usecase
 
-import androidx.paging.PagingData
-import com.pjdev.domain.model.Character
 import com.pjdev.domain.model.CharacterDetail
 import com.pjdev.domain.repository.CharacterRepository
-import kotlinx.coroutines.flow.Flow
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -14,65 +14,90 @@ import org.junit.Test
 class GetCharacterDetailUseCaseTest {
 
     @Test
-    fun getCharacterDetailReturnsSuccessWhenRepositorySucceeds() = runTest {
-        val expectedCharacter = CharacterDetail(
-            id = 1,
-            name = "Rick Sanchez",
-            imageUrl = "https://example.com/rick.jpg",
-            status = "Alive",
-            species = "Human",
-            origin = "Earth",
-            location = "Citadel of Ricks",
-            episodes = emptyList(),
-        )
+    fun getCharacterDetailReturnsSuccessWhenRepositorySucceeds() =
+        runTest {
+            val repository = mockk<CharacterRepository>()
 
-        val repository = object : CharacterRepository {
+            val expectedCharacter = CharacterDetail(
+                id = CHARACTER_ID,
+                name = "Rick Sanchez",
+                imageUrl = "https://example.com/rick.jpg",
+                status = "Alive",
+                species = "Human",
+                origin = "Earth",
+                location = "Citadel of Ricks",
+                episodes = emptyList(),
+            )
 
-            override fun getCharacters(
-                name: String?,
-            ): Flow<PagingData<Character>> {
-                error("Not required for this test")
-            }
+            coEvery {
+                repository.getCharacterDetail(
+                    id = CHARACTER_ID,
+                )
+            } returns expectedCharacter
 
-            override suspend fun getCharacterDetail(
-                id: Int,
-            ): CharacterDetail {
-                return expectedCharacter
+            val useCase = GetCharacterDetailUseCase(
+                characterRepository = repository,
+            )
+
+            val result = useCase(
+                id = CHARACTER_ID,
+            )
+
+            assertTrue(
+                result.isSuccess,
+            )
+
+            assertEquals(
+                expectedCharacter,
+                result.getOrNull(),
+            )
+
+            coVerify(exactly = 1) {
+                repository.getCharacterDetail(
+                    id = CHARACTER_ID,
+                )
             }
         }
-
-        val useCase = GetCharacterDetailUseCase(repository)
-
-        val result = useCase(1)
-
-        assertTrue(result.isSuccess)
-        assertEquals(expectedCharacter, result.getOrNull())
-    }
 
     @Test
-    fun getCharacterDetailReturnsFailureWhenRepositoryThrows() = runTest {
-        val expectedException = IllegalStateException("Repository error")
+    fun getCharacterDetailReturnsFailureWhenRepositoryThrows() =
+        runTest {
+            val repository = mockk<CharacterRepository>()
 
-        val repository = object : CharacterRepository {
+            val expectedException =
+                IllegalStateException("Repository error")
 
-            override fun getCharacters(
-                name: String?,
-            ): Flow<PagingData<Character>> {
-                error("Not required for this test")
-            }
+            coEvery {
+                repository.getCharacterDetail(
+                    id = CHARACTER_ID,
+                )
+            } throws expectedException
 
-            override suspend fun getCharacterDetail(
-                id: Int,
-            ): CharacterDetail {
-                throw expectedException
+            val useCase = GetCharacterDetailUseCase(
+                characterRepository = repository,
+            )
+
+            val result = useCase(
+                id = CHARACTER_ID,
+            )
+
+            assertTrue(
+                result.isFailure,
+            )
+
+            assertSame(
+                expectedException,
+                result.exceptionOrNull(),
+            )
+
+            coVerify(exactly = 1) {
+                repository.getCharacterDetail(
+                    id = CHARACTER_ID,
+                )
             }
         }
 
-        val useCase = GetCharacterDetailUseCase(repository)
-
-        val result = useCase(1)
-
-        assertTrue(result.isFailure)
-        assertSame(expectedException, result.exceptionOrNull())
+    private companion object {
+        const val CHARACTER_ID = 1
     }
 }
